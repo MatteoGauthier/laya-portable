@@ -9,5 +9,9 @@
   },
   "allowScripts": {
     "onnxruntime-node@1.30.0": true
-  }
+  },
+  "bin": {
+    "laya": "./cli.mjs"
+  },
+  "description": "Portable Laya runtime: BPE tokenizer, ONNX decisions, calibration (Node.js)"
 }
