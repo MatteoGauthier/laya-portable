@@ -13,6 +13,9 @@ Not an Android release yet.
 .venv/bin/python export/export_split.py       # -> models/laya-split-single.onnx (1.6 GB) + export/act_head.npz
 .venv/bin/python export/to_fp16.py            # -> models/laya-split-fp16.onnx (806 MB)
 .venv/bin/python export/check_fp16.py         # -> export/fp16-parity.json
+.venv/bin/python export/check_accuracy.py     # -> export/accuracy-report.json (13 weak checks)
+.venv/bin/python export/to_int8.py            # -> models/laya-split-int8.onnx (405 MB, rejected as-is)
+.venv/bin/python export/to_4bit.py            # -> models/laya-split-4bit.onnx (395 MB, WebGPU-broken)
 ```
 
 Offline; reuses pinned checkpoint `c5d78730f3493e4fe16d61507ef4b78eef7318cf` and
@@ -94,9 +97,29 @@ accurate — do NOT ship FP16/WebGPU without held-out accuracy validation.
 FP32 split remains the accurate WebGPU path. Playground offers both precisions
 with this caveat in the selector tooltip.
 
+## Accuracy harness + INT8/4-bit verdicts
+
+`check_accuracy.py` runs 13 weak directional checks (billing intent, phishing,
+guardrails, moderation, triage, original anchors) per variant with margins:
+
+| Variant | Score | Note |
+|---|---:|---|
+| torch-fp32, onnx-fp32-split, onnx-fp16 | 13/13 | healthy margins (≥0.19) |
+| onnx-int8 (dynamic, 405MB) | 12/13 | phishing flips 0.845→0.340; logits drift ≤5.76; no CPU speedup (35.3ms) |
+| onnx-4bit (weight-only, 395MB) | 13/13 | CPU/WASM behaviorally OK despite ≤1.06 drift |
+
+Browser 4-bit (`choice-2`): WASM 1088ms, 4.48e-02; WebGPU-basic 219ms warm but
+3.35e+00 deterministic — numerically broken (dequant + FP16 accumulation or
+kernel gap). Rejected for WebGPU pending quant-config investigation
+(asymmetric, block size, node exclusions) or ORT updates.
+
+Net Phase 3: ship FP16 for CPU/WASM (documented 1e-03 drift), FP32 split for
+WebGPU. Naive INT8 and 4-bit/WebGPU are out; selective/static quantization
+with calibration data is the deeper follow-up, gated by this harness.
+
 ## Limits
 
-5 fixtures, FP32 + FP16 split only. No INT8/4-bit, no Android, no Core ML/MLX port.
-Browser validated end-to-end on small fixtures (worker, split WebGPU);
-larger batches unmeasured. WebGPU FP16 accuracy gated on held-out validation.
-See main report for the release sequence.
+5 parity fixtures + 13 weak accuracy checks; FP32/FP16 shippable per-backend,
+naive INT8 and 4-bit/WebGPU rejected with evidence. No Android, no Core ML/MLX
+port. Browser validated end-to-end on small fixtures (worker, split WebGPU);
+larger batches unmeasured. See main report for the release sequence.

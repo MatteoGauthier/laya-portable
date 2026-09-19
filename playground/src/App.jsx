@@ -155,10 +155,12 @@ function ProgressTab() {
   const [parity, setParity] = useState(null);
   const [baseline, setBaseline] = useState(null);
   const [fp16, setFp16] = useState(null);
+  const [acc, setAcc] = useState(null);
   useEffect(() => {
     fetch('/reports/parity-report.json').then((r) => r.json()).then(setParity).catch(() => {});
     fetch('/reports/mac-baseline.json').then((r) => r.json()).then(setBaseline).catch(() => {});
     fetch('/reports/fp16-parity.json').then((r) => r.json()).then(setFp16).catch(() => {});
+    fetch('/reports/accuracy-report.json').then((r) => r.json()).then(setAcc).catch(() => {});
   }, []);
   return (
     <div>
@@ -204,6 +206,17 @@ function ProgressTab() {
           </tbody>
         </table>
       )}
+      <h3>Accuracy harness (13 weak directional checks, CPU)</h3>
+      {!acc ? <div className="empty">loading…</div> : (
+        <table>
+          <thead><tr><th>variant</th><th>score</th><th>fails</th></tr></thead>
+          <tbody>
+            {acc.adapters.map((a) => (
+              <tr key={a.name}><td>{a.name}</td><td>{a.score}/{acc.cases}</td><td>{a.rows.filter((r) => !r.pass).map((r) => r.id).join(', ') || '—'}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      )}
       <h3>Browser (measured, choice-2 B=1)</h3>
       <table>
         <tbody>
@@ -212,6 +225,9 @@ function ProgressTab() {
           <tr><td>WebGPU-basic split fp32</td><td>306ms cold PASS — fastest accurate path</td></tr>
           <tr><td>WASM split fp16</td><td>762ms warm, 1.57e-03 (matches CPU; no speedup)</td></tr>
           <tr><td>WebGPU-basic split fp16</td><td>180ms warm but 4.11e-02 — fast, NOT shippable as-is</td></tr>
+          <tr><td>CPU split int8 (405MB)</td><td>no speedup, 12/13 accuracy (phishing flip) — rejected as-is</td></tr>
+          <tr><td>WASM split 4-bit (395MB)</td><td>1088ms, 4.48e-02, harness 13/13 on CPU</td></tr>
+          <tr><td>WebGPU-basic split 4-bit</td><td>219ms warm but 3.35e+00 — numerically broken, rejected</td></tr>
         </tbody>
       </table>
       <p className="meta">Sources: export/parity-report.json · docs/mac-baseline.json · js/README.md</p>
