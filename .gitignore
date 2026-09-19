@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+.research/
+models/
+node_modules/
+dist/
+upstream/
+.DS_Store

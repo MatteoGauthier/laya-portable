@@ -1,0 +1,217 @@
+[
+  {
+    "file": "laya_fp16.onnx",
+    "producer": "pytorch",
+    "producer_version": "2.10.0+cu128",
+    "opsets": [
+      {
+        "domain": "",
+        "version": 18
+      }
+    ],
+    "inputs": [
+      {
+        "name": "input_ids",
+        "dtype": "INT64",
+        "shape": [
+          "batch_size",
+          "sequence_length"
+        ]
+      },
+      {
+        "name": "attention_mask",
+        "dtype": "INT64",
+        "shape": [
+          "batch_size",
+          "sequence_length"
+        ]
+      },
+      {
+        "name": "marker_pos",
+        "dtype": "INT64",
+        "shape": [
+          "batch_size",
+          2
+        ]
+      },
+      {
+        "name": "marker_mask",
+        "dtype": "BOOL",
+        "shape": [
+          "batch_size",
+          2
+        ]
+      },
+      {
+        "name": "qtype",
+        "dtype": "INT64",
+        "shape": [
+          "batch_size"
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "logits",
+        "dtype": "FLOAT",
+        "shape": [
+          "batch_size",
+          2
+        ]
+      }
+    ],
+    "operators": {
+      "Abs": 1,
+      "Add": 184,
+      "Cast": 9,
+      "Clip": 1,
+      "Concat": 127,
+      "Cos": 2,
+      "Div": 29,
+      "Erf": 29,
+      "Expand": 4,
+      "Gather": 8,
+      "GatherElements": 1,
+      "Gemm": 2,
+      "LayerNormalization": 62,
+      "LessOrEqual": 1,
+      "MatMul": 182,
+      "Mul": 259,
+      "Neg": 56,
+      "Not": 3,
+      "Range": 1,
+      "Relu": 2,
+      "Reshape": 138,
+      "Shape": 33,
+      "Sin": 2,
+      "Slice": 286,
+      "Softmax": 30,
+      "Split": 28,
+      "Squeeze": 89,
+      "Sub": 2,
+      "Transpose": 103,
+      "Unsqueeze": 12,
+      "Where": 4
+    },
+    "external_data": {
+      "laya_fp16.onnx.data": 200,
+      "embedded": 34
+    },
+    "revision": "a7f385bd51d35f5cbeb88e8bc4f0c7e7c0f24c44",
+    "source": "https://huggingface.co/Mattepiu/laya-onnx/blob/a7f385bd51d35f5cbeb88e8bc4f0c7e7c0f24c44/fp16_onlygpu_unverified/laya_fp16.onnx",
+    "sha256": "c0fa1dfcf40585a81801a7f254a8ab1bd29e31142244b7259fc2a1efcc132ecc"
+  },
+  {
+    "file": "laya.onnx",
+    "producer": "pytorch",
+    "producer_version": "2.10.0+cu128",
+    "opsets": [
+      {
+        "domain": "",
+        "version": 18
+      }
+    ],
+    "inputs": [
+      {
+        "name": "input_ids",
+        "dtype": "INT64",
+        "shape": [
+          "batch_size",
+          "sequence_length"
+        ]
+      },
+      {
+        "name": "attention_mask",
+        "dtype": "INT64",
+        "shape": [
+          "batch_size",
+          "sequence_length"
+        ]
+      },
+      {
+        "name": "marker_pos",
+        "dtype": "INT64",
+        "shape": [
+          "batch_size",
+          2
+        ]
+      },
+      {
+        "name": "marker_mask",
+        "dtype": "BOOL",
+        "shape": [
+          "batch_size",
+          2
+        ]
+      },
+      {
+        "name": "qtype",
+        "dtype": "INT64",
+        "shape": [
+          "batch_size"
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "logits",
+        "dtype": "FLOAT",
+        "shape": [
+          "batch_size",
+          2
+        ]
+      },
+      {
+        "name": "linear_123",
+        "dtype": "FLOAT",
+        "shape": [
+          1,
+          2
+        ]
+      }
+    ],
+    "operators": {
+      "Abs": 1,
+      "Add": 185,
+      "Cast": 6,
+      "Clip": 3,
+      "Concat": 129,
+      "Cos": 2,
+      "Div": 32,
+      "Erf": 30,
+      "Expand": 4,
+      "Gather": 11,
+      "GatherElements": 1,
+      "Gemm": 4,
+      "LayerNormalization": 62,
+      "LessOrEqual": 1,
+      "Log": 2,
+      "MatMul": 182,
+      "Mul": 262,
+      "Neg": 57,
+      "Not": 3,
+      "Range": 1,
+      "ReduceSum": 2,
+      "Relu": 2,
+      "Reshape": 138,
+      "Shape": 33,
+      "Sin": 2,
+      "Slice": 286,
+      "Softmax": 31,
+      "Split": 28,
+      "Squeeze": 89,
+      "Sub": 3,
+      "TopK": 1,
+      "Transpose": 103,
+      "Unsqueeze": 16,
+      "Where": 4
+    },
+    "external_data": {
+      "laya.onnx.data": 203,
+      "embedded": 37
+    },
+    "revision": "a7f385bd51d35f5cbeb88e8bc4f0c7e7c0f24c44",
+    "source": "https://huggingface.co/Mattepiu/laya-onnx/blob/a7f385bd51d35f5cbeb88e8bc4f0c7e7c0f24c44/laya.onnx",
+    "sha256": "ffd757c9af550c1f4d9e81feb9fcf7a97a1053ec487d15961e2ac05c73e27071"
+  }
+]

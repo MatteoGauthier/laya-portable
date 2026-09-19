@@ -1,0 +1,68 @@
+{
+  "id": "Mattepiu/laya-onnx",
+  "sha": "a7f385bd51d35f5cbeb88e8bc4f0c7e7c0f24c44",
+  "lastModified": "2026-09-18T10:45:13.000Z",
+  "safetensors": null,
+  "files": [
+    {
+      "path": ".gitattributes",
+      "size": 1716
+    },
+    {
+      "path": "README.md",
+      "size": 8525
+    },
+    {
+      "path": "eval/benchmark_comparison.png",
+      "size": 467466
+    },
+    {
+      "path": "eval/reliability_eval_in.png",
+      "size": 65436
+    },
+    {
+      "path": "eval/reliability_eval_zs.png",
+      "size": 72014
+    },
+    {
+      "path": "eval/results.json",
+      "size": 2976
+    },
+    {
+      "path": "eval/results.md",
+      "size": 1608
+    },
+    {
+      "path": "fp16_onlygpu_unverified/laya_fp16.onnx",
+      "size": 3440651
+    },
+    {
+      "path": "fp16_onlygpu_unverified/laya_fp16.onnx.data",
+      "size": 842072064
+    },
+    {
+      "path": "int8/laya_int8.onnx",
+      "size": 581105897
+    },
+    {
+      "path": "laya.onnx",
+      "size": 3443775
+    },
+    {
+      "path": "laya.onnx.data",
+      "size": 1685258240
+    },
+    {
+      "path": "special_tokens_map.json",
+      "size": 731
+    },
+    {
+      "path": "tokenizer.json",
+      "size": 3583228
+    },
+    {
+      "path": "tokenizer_config.json",
+      "size": 21785
+    }
+  ]
+}

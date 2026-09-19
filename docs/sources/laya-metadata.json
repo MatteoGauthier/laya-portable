@@ -1,0 +1,166 @@
+{
+  "id": "convaiinnovations/laya",
+  "sha": "c5d78730f3493e4fe16d61507ef4b78eef7318cf",
+  "lastModified": "2026-09-19T09:53:44.000Z",
+  "safetensors": {
+    "parameters": {
+      "F32": 3,
+      "F16": 421293827
+    },
+    "total": 421293830
+  },
+  "files": [
+    {
+      "path": ".gitattributes",
+      "size": 1913
+    },
+    {
+      "path": "README.md",
+      "size": 10217
+    },
+    {
+      "path": "assets/laya_benchmark.png",
+      "size": 260892
+    },
+    {
+      "path": "assets/laya_benchmark_common.png",
+      "size": 278159
+    },
+    {
+      "path": "assets/laya_vs_jev.png",
+      "size": 216412
+    },
+    {
+      "path": "assets/laya_vs_jev_full.png",
+      "size": 487005
+    },
+    {
+      "path": "assets/logo-lockup-dark.png",
+      "size": 27666
+    },
+    {
+      "path": "assets/logo-lockup-dark.svg",
+      "size": 1590
+    },
+    {
+      "path": "assets/logo-lockup.png",
+      "size": 26761
+    },
+    {
+      "path": "assets/logo-lockup.svg",
+      "size": 1590
+    },
+    {
+      "path": "assets/logo-mark-ink.png",
+      "size": 17378
+    },
+    {
+      "path": "assets/logo-mark-ink.svg",
+      "size": 1320
+    },
+    {
+      "path": "assets/logo-mark-mono.svg",
+      "size": 1380
+    },
+    {
+      "path": "assets/logo-mark.png",
+      "size": 17962
+    },
+    {
+      "path": "assets/logo-mark.svg",
+      "size": 1320
+    },
+    {
+      "path": "email_utils.py",
+      "size": 3937
+    },
+    {
+      "path": "encoder/config.json",
+      "size": 2083
+    },
+    {
+      "path": "eval/benchmark_comparison.png",
+      "size": 467466
+    },
+    {
+      "path": "eval/reliability_eval_in.png",
+      "size": 65436
+    },
+    {
+      "path": "eval/reliability_eval_zs.png",
+      "size": 72014
+    },
+    {
+      "path": "eval/results.json",
+      "size": 2976
+    },
+    {
+      "path": "eval/results.md",
+      "size": 1608
+    },
+    {
+      "path": "model.safetensors",
+      "size": 842609210
+    },
+    {
+      "path": "multilingual/encoder/config.json",
+      "size": 1938
+    },
+    {
+      "path": "multilingual/model.safetensors",
+      "size": 643835514
+    },
+    {
+      "path": "multilingual/rl_agent_config.json",
+      "size": 472
+    },
+    {
+      "path": "multilingual/tokenizer/tokenizer.json",
+      "size": 34363188
+    },
+    {
+      "path": "multilingual/tokenizer/tokenizer_config.json",
+      "size": 524
+    },
+    {
+      "path": "rl_agent_api.py",
+      "size": 4732
+    },
+    {
+      "path": "rl_agent_config.json",
+      "size": 745
+    },
+    {
+      "path": "rl_common.py",
+      "size": 19139
+    },
+    {
+      "path": "tokenizer/tokenizer.json",
+      "size": 3583228
+    },
+    {
+      "path": "tokenizer/tokenizer_config.json",
+      "size": 308
+    },
+    {
+      "path": "typed-decisions/encoder/config.json",
+      "size": 2084
+    },
+    {
+      "path": "typed-decisions/model.safetensors",
+      "size": 842609220
+    },
+    {
+      "path": "typed-decisions/rl_agent_config.json",
+      "size": 847
+    },
+    {
+      "path": "typed-decisions/tokenizer/tokenizer.json",
+      "size": 3583228
+    },
+    {
+      "path": "typed-decisions/tokenizer/tokenizer_config.json",
+      "size": 337
+    }
+  ]
+}
