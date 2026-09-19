@@ -11,6 +11,8 @@ Not an Android release yet.
 .venv/bin/python export/to_single_file.py     # -> models/laya-faithful-single.onnx (1.6 GB, for browser)
 .venv/bin/python export/check_parity.py       # -> export/parity-report.json + export/fixtures/*.npz
 .venv/bin/python export/export_split.py       # -> models/laya-split-single.onnx (1.6 GB) + export/act_head.npz
+.venv/bin/python export/to_fp16.py            # -> models/laya-split-fp16.onnx (806 MB)
+.venv/bin/python export/check_fp16.py         # -> export/fp16-parity.json
 ```
 
 Offline; reuses pinned checkpoint `c5d78730f3493e4fe16d61507ef4b78eef7318cf` and
@@ -74,8 +76,27 @@ relative 3.9e-07). Browser WebGPU-basic: 306ms vs 1072ms full (3.5×),
 beating WASM 756ms. JS action head PASS all 5 (relative ≤1.4e-06).
 Default WebGPU still FAILs on encoder fusion (split doesn't fix that).
 
+## FP16 (Phase 3, first step)
+
+`to_fp16.py` converts split FP32→FP16 via onnxconverter-common
+(`keep_io_types`, `op_block_list=['Cast']` — without the blocklist the model
+fails ORT load on a Cast type mismatch). 806MB, half the download. Converter
+warns it clamps -3.4e38 (attention -inf-like) to -10000; parity confirms harmless.
+
+CPU/WASM drift vs torch FP32 (`fp16-parity.json`): logits 1.6e-03–9.8e-03,
+calibrated probs ≤1.04e-03, confidence ≤1.5e-03, no label flips. Labels and
+ranking preserved; 4-dec probabilities move at the 3rd decimal.
+
+Browser (`choice-2`): WASM 762ms warm, 1.57e-03 (matches CPU, no speedup —
+WASM upcasts). WebGPU-basic 180ms warm but 4.11e-02 (deterministic across
+runs; likely FP16 accumulation in shaders vs FP32 on CPU). Fast but 40× less
+accurate — do NOT ship FP16/WebGPU without held-out accuracy validation.
+FP32 split remains the accurate WebGPU path. Playground offers both precisions
+with this caveat in the selector tooltip.
+
 ## Limits
 
-5 fixtures, FP32 only. No quantization, no Android, no Core ML/MLX port.
+5 fixtures, FP32 + FP16 split only. No INT8/4-bit, no Android, no Core ML/MLX port.
 Browser validated end-to-end on small fixtures (worker, split WebGPU);
-larger batches unmeasured. See main report for the release sequence.
+larger batches unmeasured. WebGPU FP16 accuracy gated on held-out validation.
+See main report for the release sequence.
