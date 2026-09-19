@@ -11,6 +11,7 @@ Start with [the findings and recommended path](docs/laya-portability.md). The [r
 - `export/`: faithful FP32 ONNX export + CPU parity fixtures ([notes](export/README.md)).
 - `models/`: generated FP32 graphs (gitignored): split + single-file (browser needs single-file).
 - `js/`: Node.js ORT check + browser WASM/WebGPU probes ([notes](js/README.md)).
+- `playground/`: Vite + React dev UI — inference, progress, inspector ([notes](playground/README.md)).
 
 ## Reproduce the baseline
 
