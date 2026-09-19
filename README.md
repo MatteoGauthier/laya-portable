@@ -10,6 +10,7 @@ Start with [the findings and recommended path](docs/laya-portability.md). The [r
 - `requirements-benchmark.txt`: environment versions used for the baseline and ONNX inspection.
 - `export/`: faithful FP32 ONNX export + CPU parity fixtures ([notes](export/README.md)).
 - `models/laya-faithful.onnx`: generated FP32 graph + external data (gitignored, 1.69 GB).
+- `js/`: Node.js ORT check + browser WASM/WebGPU probes ([notes](js/README.md)).
 
 ## Reproduce the baseline
 
@@ -33,4 +34,4 @@ Run `hf` from the activated environment or use `.venv/bin/hf`. `--model /absolut
 
 The benchmark uses upstream's loader, which can normalize tokenizer configuration in the supplied model directory. It does not download weights itself. Keep the checkpoint resident for inference; cold load and warm prediction are different measurements.
 
-This folder contains research, the source checkout, a measured baseline, and a validated FP32 ONNX export with CPU parity fixtures. It does not yet contain a new MLX/Core ML/ggml/browser port, quantization, or browser/Android validation.
+This folder contains research, the source checkout, a measured baseline, and a validated FP32 ONNX export with CPU/Node/browser parity checks. It does not yet contain a new MLX/Core ML/ggml port, quantization, or Android validation.

@@ -1,0 +1,13 @@
+{
+  "name": "laya-js-check",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@huggingface/transformers": "^4.3.0",
+    "onnxruntime-node": "^1.20.0",
+    "onnxruntime-web": "^1.30.0"
+  },
+  "allowScripts": {
+    "onnxruntime-node@1.30.0": true
+  }
+}

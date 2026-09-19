@@ -1,12 +1,14 @@
 # Faithful ONNX export (FP32) + parity fixtures
 
 First milestone from `docs/laya-portability.md`: reproducible tensor-only export,
-validated on CPU. Not a browser/Android release yet.
+validated on CPU, Node.js, and browser WASM/WebGPU (see `../js/README.md`).
+Not an Android release yet.
 
 ## Reproduce
 
 ```sh
 .venv/bin/python export/export_onnx.py        # -> models/laya-faithful.onnx (+ .data, 1.69 GB)
+.venv/bin/python export/to_single_file.py     # -> models/laya-faithful-single.onnx (1.6 GB, for browser)
 .venv/bin/python export/check_parity.py       # -> export/parity-report.json + export/fixtures/*.npz
 ```
 
@@ -55,12 +57,19 @@ nodes on CoreML), slower than CPU. Direct CoreML conversion remains untested.
 ## Operators vs browser
 
 Graph (opset 18) includes `TopK:1`, `IsNaN:28`, `GatherND:1`, `GatherElements:1`.
-`TopK` was absent from the inspected ORT WebGPU table; browser provider
-assignment and execution are untested. If WebGPU blocks on the action branch,
-the report's split-graph proposal (GPU for logits + first-token vector, CPU
-for top-two stats + small head) is the next experiment.
+Static WebGPU table omits `TopK`, `IsNaN`, `And`, `Max`, but tiny single-op
+probes PASS on both WASM and WebGPU (likely CPU fallback, not proof of GPU
+placement). Full-model browser results (single-file, `choice-2`): WASM 756ms
+PASS (2.38e-06); WebGPU default FAILs on `SkipLayerNormalization` fusion
+(`Beta must be 1D`); WebGPU with `graphOptimizationLevel:'basic'` 1322ms PASS
+(3.81e-06), slower than WASM despite Metal hardware. External-data format
+fails in browser (`MountedFiles`); single-file required. Details in
+`../js/README.md`. If WebGPU partitioning remains costly, the report's
+split-graph proposal (GPU for logits + first-token vector, CPU for top-two
+stats + small head) is still the next optimization experiment.
 
 ## Limits
 
-5 fixtures, FP32 CPU only. No quantization, no WASM/WebGPU run, no Android,
-no Core ML/MLX port. See main report for the release sequence.
+5 fixtures, FP32 only. No quantization, no Android, no Core ML/MLX port.
+Browser validated for correctness on one small fixture; larger batches and
+worker/caching UX unmeasured. See main report for the release sequence.
