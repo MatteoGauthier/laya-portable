@@ -1,0 +1,51 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Worker demo: idle</title>
+<script type="importmap">
+{"imports": {
+  "onnxruntime-web": "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/ort.all.min.mjs",
+  "onnxruntime-web/webgpu": "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/ort.all.min.mjs"
+}}
+</script></head><body>
+<h1>Laya worker demo</h1>
+<p>Counter (proves main thread responsive): <b id="counter">0</b></p>
+<button id="run">Run end-to-end text→answer (split webgpu)</button>
+<pre id="out">idle. Click Run.</pre>
+<script type="module">
+const out = document.getElementById('out'), counter = document.getElementById('counter');
+let n = 0;
+setInterval(() => { counter.textContent = String(++n); }, 100);
+window.__counterTicks = () => n;
+const worker = new Worker('/js/web-test/worker.js', { type: 'module' });
+worker.onerror = (e) => {
+  out.textContent += `\nWORKER ERROR ${e.message} @${e.filename}:${e.lineno}`;
+  document.title = 'Worker demo: ERROR';
+  window.__workerDone = true;
+};
+const STATE = { subject: 'Duplicate charge on invoice 4411', body: 'We were billed twice for March. Please refund the duplicate.' };
+const QUESTIONS = {
+  department: { type: 'choice', instructions: 'Which team should handle this?', criteria: { billing: 'invoices, payments, refunds', technical: 'bugs and outages', sales: 'pricing' } },
+};
+worker.onmessage = (e) => {
+  const m = e.data;
+  if (m.type === 'progress') out.textContent += `\n[${m.stage}]… (counter=${n})`;
+  else if (m.type === 'download') out.textContent += `\n  download ${m.pct}% (counter=${n})`;
+  else if (m.type === 'done') {
+    out.textContent += `\nDONE infer=${m.inferMs}ms total=${m.totalMs}ms\n` + JSON.stringify(m.result, null, 1).slice(0, 800);
+    document.title = 'Worker demo: DONE';
+    window.__workerDone = true;
+    window.__workerResult = m.result;
+  } else if (m.type === 'error') {
+    out.textContent += `\nERROR ${m.message}`;
+    document.title = 'Worker demo: ERROR';
+    window.__workerDone = true;
+  }
+};
+document.getElementById('run').onclick = () => {
+  out.textContent = 'starting worker…';
+  document.title = 'Worker demo: running';
+  worker.postMessage({ state: STATE, questions: QUESTIONS, backend: 'auto' });
+};
+// auto-start for automation
+document.getElementById('run').click();
+</script>
+</body></html>

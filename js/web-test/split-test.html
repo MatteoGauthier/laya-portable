@@ -1,0 +1,36 @@
+<!doctype html><html><head><meta charset="utf-8"><title>split test</title>
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/ort.all.min.js"></script>
+</head><body><pre id="out">starting</pre>
+<script type="module">
+const out = document.getElementById('out');
+const log = s => out.textContent += '\n' + s;
+const fx = await (await fetch('/js/fixtures/choice-2.json')).json();
+const { batch: B, seq_len: S, kmax: K } = fx;
+const toI64 = n => BigInt64Array.from(n.flat(Infinity).map(v => BigInt(v)));
+const toB8 = n => Uint8Array.from(n.flat(Infinity).map(v => v ? 1 : 0));
+const feeds = {
+  input_ids: new ort.Tensor('int64', toI64(fx.inputs.input_ids), [B, S]),
+  attention_mask: new ort.Tensor('int64', toI64(fx.inputs.attention_mask), [B, S]),
+  marker_pos: new ort.Tensor('int64', toI64(fx.inputs.marker_pos), [B, K]),
+  marker_mask: new ort.Tensor('bool', toB8(fx.inputs.marker_mask), [B, K]),
+  qtype: new ort.Tensor('int64', toI64([fx.inputs.qtype]), [B]),
+};
+for (const [name, url, opts] of [
+  ['full-webgpu-basic', '/models/laya-faithful-single.onnx', { executionProviders: ['webgpu'], graphOptimizationLevel: 'basic' }],
+  ['split-webgpu-default', '/models/laya-split-single.onnx', { executionProviders: ['webgpu'] }],
+  ['split-webgpu-basic', '/models/laya-split-single.onnx', { executionProviders: ['webgpu'], graphOptimizationLevel: 'basic' }],
+]) {
+  try {
+    const t0 = performance.now();
+    const sess = await ort.InferenceSession.create(url, opts);
+    const loadMs = Math.round(performance.now() - t0);
+    const t1 = performance.now();
+    const r = await sess.run(feeds);
+    const runMs = Math.round(performance.now() - t1);
+    const lo = Array.from(r.logits.data), exp = fx.expected_torch_logits.flat(Infinity);
+    let m = 0; for (let i = 0; i < lo.length; i++) m = Math.max(m, Math.abs(lo[i] - exp[i]));
+    log(`${name}: load ${loadMs}ms run ${runMs}ms diff ${m.toExponential(2)} ${m < 1e-4 ? 'PASS' : 'CHECK'}`);
+  } catch (e) { log(`${name}: FAIL ${String(e.message || e).slice(0, 200)}`); }
+}
+document.title = 'split test DONE';
+</script></body></html>

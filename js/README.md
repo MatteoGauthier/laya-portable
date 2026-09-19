@@ -1,50 +1,65 @@
 # JS runtime + browser validation
 
 Reuses `export/fixtures/*.npz` via `js/fixtures/*.json` (emitted by
-`export/emit_js_fixtures.py`). No tokenizer yet; inputs are pre-tokenized.
+`export/emit_js_fixtures.py`).
 
 ## Node.js (onnxruntime-node 1.30.0)
 
 ```sh
-cd js && npm install && node run-node.mjs
+cd js && npm install && node run-node.mjs && node check-tokenizer.mjs && node check-split.mjs && node check-bpe.mjs && node check-bpe-fuzz.mjs
 ```
 
-Result: PASS all 5 fixtures, identical diffs to Python ORT
-(logits 3.8–7.7e-06, pdrift ≤1.1e-06). Validates graph + JS
-temperature/softmax replication.
+- `run-node.mjs`: PASS all 5, identical diffs to Python ORT (logits ≤7.7e-06).
+- `check-tokenizer.mjs`: PASS all 5, transformers.js token IDs match Python exactly.
+- `check-bpe.mjs` / `check-bpe-fuzz.mjs`: PASS 5/5 + 206/206, pure-JS BPE matches Python.
+- `check-split.mjs`: PASS all 5, split ORT + JS action head matches torch.
 
-## Browser probes (onnxruntime-web 1.30.0, headless Chrome, Metal GPU)
+## Browser (onnxruntime-web 1.30.0, headless Chrome, Metal GPU)
 
 ```sh
-cd js/web-test && python3 -m http.server 8765
-# open http://localhost:8765/index.html (tiny ops) or full.html (1.69GB)
+python3 -m http.server 8765  # from workspace root
+# open http://localhost:8765/js/web-test/index.html | full.html | split-test.html | worker-demo.html
 ```
 
-Tiny probes (`export/build_web_probes.py`, IR 10): `add`, `topk`, `isnan`,
-`and`, `max` all PASS on both `wasm` and `webgpu`. Static table lists 4 as
-missing, so WebGPU likely falls back to CPU for those single-op graphs
-rather than failing. Execution alone does not prove GPU placement.
+Tiny probes: `add`, `topk`, `isnan`, `and`, `max` all PASS on `wasm` and
+`webgpu` (likely CPU fallback for the 4 unlisted ops, not proof of placement).
 
-Full model (`choice-2`, B=1 S=50):
+Full model (`choice-2`, B=1 S=50, single-file required — external-data fails
+with `MountedFiles`):
 
-| Backend | Load | Run | max\|logit\| vs torch | Note |
-|---|---:|---:|---:|---|
-| wasm | 2.8s | 756ms | 2.38e-06 PASS | external-data format fails; single-file required |
-| webgpu (default) | 1.9s | FAIL | — | `SkipLayerNormalization: Beta must be 1D` (fusion bug) |
-| webgpu-basic | 4.0s | 1322ms | 3.81e-06 PASS | `graphOptimizationLevel:'basic'` avoids fusion, slower than wasm |
+| Backend | Run | max\|logit\| | Note |
+|---|---:|---:|---|
+| wasm | 756ms | 2.38e-06 PASS | baseline |
+| webgpu (default) | FAIL | — | `SkipLayerNormalization: Beta must be 1D` (encoder fusion bug) |
+| webgpu-basic | 1072ms | 3.81e-06 PASS | avoids fusion, slower than wasm |
 
-External-data `.onnx` + `.data` fails in browser with
-`Module.MountedFiles is not available`. Use single-file
-`models/laya-faithful-single.onnx` (1.6GB, via `export/to_single_file.py`);
-numerics identical to split format (7.39e-06 both).
+Split model (`laya-split-single.onnx`, logits+pooled, JS action head):
 
-WebGPU is hardware Metal (`vendor:apple arch:metal-3`) yet slower than WASM
-for B=1 (1322 vs 756ms), and 35–60× slower than native Torch MPS (21.8ms).
-Browser inference is feasible and correct, but not fast. Partitioning from
-CPU-fallback ops + small-batch overhead are the likely causes.
+| Backend | Run | max\|logit\| | Note |
+|---|---:|---:|---|
+| webgpu-default | FAIL | — | same encoder fusion bug (split doesn't fix it) |
+| webgpu-basic | 306ms | 3.81e-06 PASS | 3.5× faster than full, 2.5× faster than wasm |
+
+WebGPU is hardware Metal yet full-graph is slower than WASM; split flips the
+ranking. Still ~14× slower than native Torch MPS (21.8ms).
+
+Worker (`worker-demo.html`, end-to-end text→answer, split, auto backend):
+pure-JS BPE tokenization + inference + calibration off main thread, with
+download % and backend selection. Verified billing 0.967 / 63 tokens, matching
+`docs/mac-baseline.json` exactly; counter ticks throughout 1.6GB load.
+
+## Tokenizer: pure-JS BPE, no bundler
+
+`js/laya-bpe.mjs` implements ByteLevel BPE from `tokenizer.json` (NFC, added
+longest-match with `[MASK]` lstrip, GPT-2 regex, byte mapping, rank merges).
+`check-bpe.mjs` PASS 5/5 fixtures; `check-bpe-fuzz.mjs` PASS 206/206
+(unicode, spaces, added tokens). transformers.js needs a bundler in browser
+(bare `onnxruntime-*` deps; verified FAILs via bare CDN/esm.sh/Hub), so the
+worker uses the dependency-free port with `tokenizer.json` + `rl_agent_config.json`
+served locally.
 
 ## Limits
 
-Pre-tokenized fixtures only; no JS tokenizer, no worker/caching/progress UI,
-no Android test. Full-model test uses one small fixture; larger batches
-unmeasured in browser.
+No Cache Storage pinning (browser HTTP cache applies; explicit pinning is
+production follow-up), no Android test, one small fixture in browser.
+`act_head.json` is 5.2MB JSON (prototype; use binary for production).

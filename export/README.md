@@ -10,6 +10,7 @@ Not an Android release yet.
 .venv/bin/python export/export_onnx.py        # -> models/laya-faithful.onnx (+ .data, 1.69 GB)
 .venv/bin/python export/to_single_file.py     # -> models/laya-faithful-single.onnx (1.6 GB, for browser)
 .venv/bin/python export/check_parity.py       # -> export/parity-report.json + export/fixtures/*.npz
+.venv/bin/python export/export_split.py       # -> models/laya-split-single.onnx (1.6 GB) + export/act_head.npz
 ```
 
 Offline; reuses pinned checkpoint `c5d78730f3493e4fe16d61507ef4b78eef7318cf` and
@@ -61,15 +62,20 @@ Static WebGPU table omits `TopK`, `IsNaN`, `And`, `Max`, but tiny single-op
 probes PASS on both WASM and WebGPU (likely CPU fallback, not proof of GPU
 placement). Full-model browser results (single-file, `choice-2`): WASM 756ms
 PASS (2.38e-06); WebGPU default FAILs on `SkipLayerNormalization` fusion
-(`Beta must be 1D`); WebGPU with `graphOptimizationLevel:'basic'` 1322ms PASS
+(`Beta must be 1D`); WebGPU with `graphOptimizationLevel:'basic'` 1072ms PASS
 (3.81e-06), slower than WASM despite Metal hardware. External-data format
 fails in browser (`MountedFiles`); single-file required. Details in
-`../js/README.md`. If WebGPU partitioning remains costly, the report's
-split-graph proposal (GPU for logits + first-token vector, CPU for top-two
-stats + small head) is still the next optimization experiment.
+`../js/README.md`.
+
+Split variant implements the report's proposal: GPU graph returns
+`(logits, pooled)` without `TopK`/`Log`/`ReduceSum`/action head; 1MB
+`act_head.npz` runs on CPU/JS. Python parity PASS (logits 7.39e-06, act
+relative 3.9e-07). Browser WebGPU-basic: 306ms vs 1072ms full (3.5×),
+beating WASM 756ms. JS action head PASS all 5 (relative ≤1.4e-06).
+Default WebGPU still FAILs on encoder fusion (split doesn't fix that).
 
 ## Limits
 
 5 fixtures, FP32 only. No quantization, no Android, no Core ML/MLX port.
-Browser validated for correctness on one small fixture; larger batches and
-worker/caching UX unmeasured. See main report for the release sequence.
+Browser validated end-to-end on small fixtures (worker, split WebGPU);
+larger batches unmeasured. See main report for the release sequence.
