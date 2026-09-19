@@ -170,7 +170,7 @@ function ProgressTab() {
           <tr><td>✅ Phase 1</td><td>Faithful FP32 ONNX export, variable-K, 5-fixture CPU parity PASS</td></tr>
           <tr><td>✅ Phase 2</td><td>Browser library core: pure-JS BPE, split WebGPU, worker text→answer</td></tr>
           <tr><td>▶ Phase 3</td><td>Precision and size (FP16 → INT8/4-bit with drift checks)</td></tr>
-          <tr><td>⬜ Phase 4</td><td>Native product choice (CoreML/MLX vs laya.cpp) on measured benefit</td></tr>
+          <tr><td>⬜ Phase 4</td><td>Native pick: CoreML spike blocked on toolchain (trace + new_ones gaps); MLX/laya.cpp untouched</td></tr>
         </tbody>
       </table>
       <h3>Parity (torch CPU vs ORT CPU)</h3>

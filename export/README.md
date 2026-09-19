@@ -117,6 +117,16 @@ Net Phase 3: ship FP16 for CPU/WASM (documented 1e-03 drift), FP32 split for
 WebGPU. Naive INT8 and 4-bit/WebGPU are out; selective/static quantization
 with calibration data is the deeper follow-up, gated by this harness.
 
+## CoreML spike (Phase 4, blocked on toolchain)
+
+`to_coreml.py` attempts split→CoreML via TorchScript trace and via
+`torch.export` + decompositions (coremltools 9.0, torch 2.14 untested).
+TorchScript fails on a float64/int64 dtype conflict inside HF ModernBERT
+mask handling; `torch.export` converts further but coremltools lacks the
+`new_ones` op. No `.mlpackage` produced. Follow-ups: torch 2.7 venv,
+custom decomposition for `new_ones`, or a newer coremltools. MPS (21.8ms/1q)
+remains the Apple GPU reference.
+
 ## Limits
 
 5 parity fixtures + 13 weak accuracy checks; FP32/FP16 shippable per-backend,
