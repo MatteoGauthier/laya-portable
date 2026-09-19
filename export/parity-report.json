@@ -1,0 +1,401 @@
+{
+  "model_revision": "c5d78730f3493e4fe16d61507ef4b78eef7318cf",
+  "source_commit": "6a5819129eb220570792e417e49723d697efd76f",
+  "onnx": "/Users/matteolemni/dev/PeopleProjects/laya-test/models/laya-faithful.onnx",
+  "ort_version": "1.30.0",
+  "torch_version": "2.14.0",
+  "fixtures": [
+    {
+      "name": "orig-3q",
+      "batch": 3,
+      "seq_len": 63,
+      "kmax": 3,
+      "k_per_q": [
+        3,
+        3,
+        2
+      ],
+      "qtypes": [
+        0,
+        1,
+        2
+      ],
+      "max_abs_logits": 7.68899917602539e-06,
+      "mean_abs_logits": 3.203749656677246e-06,
+      "max_abs_act_logits": 0.00537109375,
+      "mean_abs_act_logits": 0.001953125,
+      "max_rel_act_logits": 1.4384044106918736e-06,
+      "max_calibrated_prob_drift": 1.000000000001e-06,
+      "max_act_prob_drift": 0.0,
+      "labels_match": true,
+      "rounded_4dec_match": true,
+      "torch": {
+        "department": {
+          "probs": {
+            "billing": 0.967002,
+            "technical": 0.013694,
+            "sales": 0.019304
+          },
+          "choice": "billing",
+          "confidence": 0.8476,
+          "act": 1.0,
+          "raw_logits": [
+            4.417510986328125,
+            -3.075918197631836,
+            -2.471489429473877
+          ]
+        },
+        "urgency": {
+          "probs": {
+            "0": 0.081923,
+            "1": 0.20664,
+            "2": 0.711436
+          },
+          "score": 1.629513,
+          "confidence": 0.2964,
+          "act": 1.0,
+          "raw_logits": [
+            0.47067320346832275,
+            1.6284937858581543,
+            3.1756443977355957
+          ]
+        },
+        "churn_risk": {
+          "noul": 0.197752,
+          "confidence": 0.8022,
+          "act": 1.0,
+          "raw_logits": [
+            2.8229191303253174,
+            0.045353710651397705
+          ]
+        }
+      },
+      "onnx": {
+        "department": {
+          "probs": {
+            "billing": 0.967002,
+            "technical": 0.013694,
+            "sales": 0.019304
+          },
+          "choice": "billing",
+          "confidence": 0.8476,
+          "act": 1.0,
+          "raw_logits": [
+            4.417506217956543,
+            -3.0759119987487793,
+            -2.471489191055298
+          ]
+        },
+        "urgency": {
+          "probs": {
+            "0": 0.081924,
+            "1": 0.206641,
+            "2": 0.711435
+          },
+          "score": 1.629512,
+          "confidence": 0.2964,
+          "act": 1.0,
+          "raw_logits": [
+            0.4706808924674988,
+            1.628499150276184,
+            3.1756443977355957
+          ]
+        },
+        "churn_risk": {
+          "noul": 0.197752,
+          "confidence": 0.8022,
+          "act": 1.0,
+          "raw_logits": [
+            2.8229193687438965,
+            0.04535257816314697
+          ]
+        }
+      }
+    },
+    {
+      "name": "choice-3",
+      "batch": 1,
+      "seq_len": 63,
+      "kmax": 3,
+      "k_per_q": [
+        3
+      ],
+      "qtypes": [
+        0
+      ],
+      "max_abs_logits": 3.814697265625e-06,
+      "mean_abs_logits": 2.3047130071063293e-06,
+      "max_abs_act_logits": 0.0009765625,
+      "mean_abs_act_logits": 0.000732421875,
+      "max_rel_act_logits": 2.2237696839511045e-07,
+      "max_calibrated_prob_drift": 0.0,
+      "max_act_prob_drift": 0.0,
+      "labels_match": true,
+      "rounded_4dec_match": true,
+      "torch": {
+        "department": {
+          "probs": {
+            "billing": 0.967002,
+            "technical": 0.013694,
+            "sales": 0.019304
+          },
+          "choice": "billing",
+          "confidence": 0.8476,
+          "act": 1.0,
+          "raw_logits": [
+            4.417508602142334,
+            -3.075915813446045,
+            -2.4714884757995605
+          ]
+        }
+      },
+      "onnx": {
+        "department": {
+          "probs": {
+            "billing": 0.967002,
+            "technical": 0.013694,
+            "sales": 0.019304
+          },
+          "choice": "billing",
+          "confidence": 0.8476,
+          "act": 1.0,
+          "raw_logits": [
+            4.417506217956543,
+            -3.0759119987487793,
+            -2.471489191055298
+          ]
+        }
+      }
+    },
+    {
+      "name": "choice-2",
+      "batch": 1,
+      "seq_len": 50,
+      "kmax": 2,
+      "k_per_q": [
+        2
+      ],
+      "qtypes": [
+        0
+      ],
+      "max_abs_logits": 7.3909759521484375e-06,
+      "mean_abs_logits": 4.887580871582031e-06,
+      "max_abs_act_logits": 0.001953125,
+      "mean_abs_act_logits": 0.00146484375,
+      "max_rel_act_logits": 4.2125952859350946e-07,
+      "max_calibrated_prob_drift": 0.0,
+      "max_act_prob_drift": 0.0,
+      "labels_match": true,
+      "rounded_4dec_match": true,
+      "torch": {
+        "dept2": {
+          "probs": {
+            "billing": 0.963655,
+            "technical": 0.036345
+          },
+          "choice": "billing",
+          "confidence": 0.7747,
+          "act": 1.0,
+          "raw_logits": [
+            4.174102306365967,
+            -2.0743184089660645
+          ]
+        }
+      },
+      "onnx": {
+        "dept2": {
+          "probs": {
+            "billing": 0.963655,
+            "technical": 0.036345
+          },
+          "choice": "billing",
+          "confidence": 0.7747,
+          "act": 1.0,
+          "raw_logits": [
+            4.174104690551758,
+            -2.0743110179901123
+          ]
+        }
+      }
+    },
+    {
+      "name": "choice-6",
+      "batch": 1,
+      "seq_len": 74,
+      "kmax": 6,
+      "k_per_q": [
+        6
+      ],
+      "qtypes": [
+        0
+      ],
+      "max_abs_logits": 4.902482032775879e-06,
+      "mean_abs_logits": 1.8800297993948334e-06,
+      "max_abs_act_logits": 0.0009765625,
+      "mean_abs_act_logits": 0.000732421875,
+      "max_rel_act_logits": 2.2384298858924012e-07,
+      "max_calibrated_prob_drift": 1.0000000000287557e-06,
+      "max_act_prob_drift": 0.0,
+      "labels_match": true,
+      "rounded_4dec_match": true,
+      "torch": {
+        "dept6": {
+          "probs": {
+            "team0": 0.533489,
+            "team1": 0.265515,
+            "team2": 0.131888,
+            "team3": 0.034116,
+            "team4": 0.019049,
+            "team5": 0.015943
+          },
+          "choice": "team0",
+          "confidence": 0.324,
+          "act": 1.0,
+          "raw_logits": [
+            0.7140895128250122,
+            0.016311734914779663,
+            -0.6834195256233215,
+            -2.0356273651123047,
+            -2.6183865070343018,
+            -2.7963955402374268
+          ]
+        }
+      },
+      "onnx": {
+        "dept6": {
+          "probs": {
+            "team0": 0.533488,
+            "team1": 0.265516,
+            "team2": 0.131888,
+            "team3": 0.034116,
+            "team4": 0.019049,
+            "team5": 0.015943
+          },
+          "choice": "team0",
+          "confidence": 0.324,
+          "act": 1.0,
+          "raw_logits": [
+            0.7140895128250122,
+            0.01631663739681244,
+            -0.6834172010421753,
+            -2.0356295108795166,
+            -2.618386745452881,
+            -2.7963972091674805
+          ]
+        }
+      }
+    },
+    {
+      "name": "mixed-batch",
+      "batch": 3,
+      "seq_len": 67,
+      "kmax": 5,
+      "k_per_q": [
+        5,
+        2,
+        2
+      ],
+      "qtypes": [
+        0,
+        2,
+        1
+      ],
+      "max_abs_logits": 6.079673767089844e-06,
+      "mean_abs_logits": 2.695454440981848e-06,
+      "max_abs_act_logits": 0.00146484375,
+      "mean_abs_act_logits": 0.0008138020639307797,
+      "max_rel_act_logits": 4.1322752508676786e-07,
+      "max_calibrated_prob_drift": 1.0000000000287557e-06,
+      "max_act_prob_drift": 0.0,
+      "labels_match": true,
+      "rounded_4dec_match": false,
+      "torch": {
+        "a_choice5": {
+          "probs": {
+            "o0": 0.272771,
+            "o1": 0.317907,
+            "o2": 0.316141,
+            "o3": 0.052726,
+            "o4": 0.040454
+          },
+          "choice": "o1",
+          "confidence": 0.1502,
+          "act": 1.0,
+          "raw_logits": [
+            0.6826969385147095,
+            0.9522209167480469,
+            0.942413866519928,
+            -2.21014404296875,
+            -2.6764895915985107
+          ]
+        },
+        "b_noul": {
+          "noul": 0.197752,
+          "confidence": 0.8022,
+          "act": 1.0,
+          "raw_logits": [
+            2.8229098320007324,
+            0.045355379581451416
+          ]
+        },
+        "c_score2": {
+          "probs": {
+            "0": 0.18295,
+            "1": 0.81705
+          },
+          "score": 0.81705,
+          "confidence": 0.3135,
+          "act": 1.0,
+          "raw_logits": [
+            -0.17053169012069702,
+            1.7022172212600708
+          ]
+        }
+      },
+      "onnx": {
+        "a_choice5": {
+          "probs": {
+            "o0": 0.272772,
+            "o1": 0.317907,
+            "o2": 0.31614,
+            "o3": 0.052726,
+            "o4": 0.040454
+          },
+          "choice": "o1",
+          "confidence": 0.1502,
+          "act": 1.0,
+          "raw_logits": [
+            0.6826967597007751,
+            0.952216625213623,
+            0.9424077868461609,
+            -2.210144281387329,
+            -2.676486015319824
+          ]
+        },
+        "b_noul": {
+          "noul": 0.197752,
+          "confidence": 0.8022,
+          "act": 1.0,
+          "raw_logits": [
+            2.822913885116577,
+            0.04535450041294098
+          ]
+        },
+        "c_score2": {
+          "probs": {
+            "0": 0.182949,
+            "1": 0.817051
+          },
+          "score": 0.817051,
+          "confidence": 0.3135,
+          "act": 1.0,
+          "raw_logits": [
+            -0.1705331951379776,
+            1.7022206783294678
+          ]
+        }
+      }
+    }
+  ],
+  "overall_pass": true
+}

@@ -8,6 +8,8 @@ Start with [the findings and recommended path](docs/laya-portability.md). The [r
 - `docs/mac-baseline.json`: timings, environment, and prediction outputs from this Mac.
 - `docs/sources/`: pinned Hub file inventories and an audit of the community ONNX graph contracts.
 - `requirements-benchmark.txt`: environment versions used for the baseline and ONNX inspection.
+- `export/`: faithful FP32 ONNX export + CPU parity fixtures ([notes](export/README.md)).
+- `models/laya-faithful.onnx`: generated FP32 graph + external data (gitignored, 1.69 GB).
 
 ## Reproduce the baseline
 
@@ -31,4 +33,4 @@ Run `hf` from the activated environment or use `.venv/bin/hf`. `--model /absolut
 
 The benchmark uses upstream's loader, which can normalize tokenizer configuration in the supplied model directory. It does not download weights itself. Keep the checkpoint resident for inference; cold load and warm prediction are different measurements.
 
-This folder contains research, the source checkout, and a measured baseline. It does not yet contain a new MLX/Core ML/ggml/browser port or a validated ONNX conversion.
+This folder contains research, the source checkout, a measured baseline, and a validated FP32 ONNX export with CPU parity fixtures. It does not yet contain a new MLX/Core ML/ggml/browser port, quantization, or browser/Android validation.
