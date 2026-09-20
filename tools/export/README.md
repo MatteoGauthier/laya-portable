@@ -105,6 +105,13 @@ accurate — do NOT ship FP16/WebGPU without held-out accuracy validation.
 FP32 split remains the accurate WebGPU path. Playground offers both precisions
 with this caveat in the selector tooltip.
 
+Retry (2026-09-20): surgical FP32-softmax variant (`keep_softmax_fp32.py`,
+30 Softmaxes wrapped — the converter blocklist path never terminates on this
+graph, so the casts are hand-placed). CPU parity ≈ plain FP16, no flips;
+WebGPU improves 4.11e-02 → 2.94e-02 (167ms) — softmax is ~30% of the gap,
+the rest is FP16 matmul accumulation. Still 300× over the 1e-4 gate:
+verdict stands.
+
 ## Accuracy harness + INT8/4-bit verdicts
 
 `check_accuracy.py` runs 13 weak directional checks (billing intent, phishing,

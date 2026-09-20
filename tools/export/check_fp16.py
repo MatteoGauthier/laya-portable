@@ -39,17 +39,18 @@ def conf_entropy(p, k):
     ent = -(p[:k] * np.log(np.clip(p[:k], 1e-12, 1))).sum()
     return float(np.clip(1 - ent / math.log(k), 0, 1))
 
-sess16 = ort.InferenceSession(str(ROOT / "models" / "laya-split-fp16.onnx"), providers=["CPUExecutionProvider"])
-sess32 = ort.InferenceSession(str(ROOT / "models" / "laya-split-single.onnx"), providers=["CPUExecutionProvider"])
-
 ap = argparse.ArgumentParser()
 ap.add_argument("--revision", default="c5d78730f3493e4fe16d61507ef4b78eef7318cf")
+ap.add_argument("--model", type=Path, default=ROOT / "models" / "laya-split-fp16.onnx")
+ap.add_argument("--report", type=Path, default=REPORTS / "fp16-parity.json")
 args, _ = ap.parse_known_args()
+sess16 = ort.InferenceSession(str(args.model), providers=["CPUExecutionProvider"])
+sess32 = ort.InferenceSession(str(ROOT / "models" / "laya-split-single.onnx"), providers=["CPUExecutionProvider"])
 import os
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 from huggingface_hub import snapshot_download
 snap = snapshot_download("convaiinnovations/laya", revision=args.revision, local_files_only=True)
-rep = {"model": "laya-split-fp16.onnx", "fixtures": []}
+rep = {"model": Path(args.model).name, "fixtures": []}
 for name in ["orig-3q", "choice-3", "choice-2", "choice-6", "mixed-batch"]:
     d = np.load(VECTORS / f"{name}.npz")
     feeds = {k: d[k] for k in ["input_ids", "attention_mask", "marker_pos", "marker_mask", "qtype"]}
@@ -88,5 +89,5 @@ for name in ["orig-3q", "choice-3", "choice-2", "choice-6", "mixed-batch"]:
     print(f"{name}: dlogits={dl:.2e} dpooled(fp32ort)={dp:.2e} actrel={da:.2e} pdrift={maxp:.2e} cdrift={maxc:.2e} flips={flips or 'none'}", flush=True)
     rep["fixtures"].append({"name": name, "max_abs_logits_vs_torch": float(dl), "max_abs_pooled_vs_fp32ort": float(dp),
         "max_rel_act_vs_torch": float(da), "max_calibrated_prob_drift": float(maxp), "max_confidence_drift": float(maxc), "label_flips": [int(x) for x in flips]})
-(REPORTS / "fp16-parity.json").write_text(json.dumps(rep, indent=2) + "\n")
-print("wrote export/fp16-parity.json")
+(args.report).write_text(json.dumps(rep, indent=2) + "\n")
+print(f"wrote {args.report}")
