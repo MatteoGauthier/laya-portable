@@ -2,10 +2,10 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 // Single worker instance, created once, terminated on unmount.
 // (Previous version constructed in render — leaked a second Worker under StrictMode.)
-export function useWorker() {
-  const ref = useRef(null);
+export function useWorker(): Worker {
+  const ref = useRef<Worker | null>(null);
   const worker = useMemo(() => {
-    const w = new Worker(new URL('../worker.js', import.meta.url), { type: 'module' });
+    const w = new Worker(new URL('../worker.ts', import.meta.url), { type: 'module' });
     ref.current = w;
     return w;
   }, []);
@@ -14,7 +14,7 @@ export function useWorker() {
 }
 
 // Isolated main-thread heartbeat (previously re-rendered the whole tab 4x/sec).
-export function Heartbeat() {
+export function Heartbeat(): React.JSX.Element {
   const [ticks, setTicks] = useState(0);
   useEffect(() => {
     const t = setInterval(() => setTicks((n) => n + 1), 1000);

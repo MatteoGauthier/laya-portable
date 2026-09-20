@@ -1,5 +1,12 @@
 // Preset states/questions for the playground (extracted from App.jsx).
-export const PRESETS = {
+import type { Questions } from '@js/laya-types.ts';
+
+export interface Preset {
+  state: Record<string, string>;
+  questions: Questions;
+}
+
+export const PRESETS: Record<string, Preset> = {
   'Original 3Q': {
     state: {
       subject: 'Duplicate charge on invoice 4411',

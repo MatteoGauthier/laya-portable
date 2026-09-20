@@ -1,22 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { useWorker, Heartbeat } from '../hooks/useWorker.jsx';
-import { PRESETS } from '../lib/presets.js';
-import { AnswerCard } from '../components/answers.jsx';
+import { useWorker, Heartbeat } from '../hooks/useWorker.tsx';
+import { PRESETS } from '../lib/presets.ts';
+import { AnswerCard } from '../components/answers.tsx';
+import type { Questions, WorkerResponse } from '@js/laya-types.ts';
 
-export function PlaygroundTab() {
+type Backend = 'auto' | 'webgpu' | 'wasm';
+type Precision = 'fp32' | 'fp16';
+
+export function PlaygroundTab(): React.JSX.Element {
   const worker = useWorker();
   const [preset, setPreset] = useState('Original 3Q');
-  const [stateText, setStateText] = useState(JSON.stringify(PRESETS['Original 3Q'].state, null, 1));
-  const [qText, setQText] = useState(JSON.stringify(PRESETS['Original 3Q'].questions, null, 1));
-  const [backend, setBackend] = useState('auto');
-  const [precision, setPrecision] = useState('fp32');
+  const initial = PRESETS['Original 3Q'];
+  if (!initial) throw new Error('missing Original 3Q preset');
+  const [stateText, setStateText] = useState(JSON.stringify(initial.state, null, 1));
+  const [qText, setQText] = useState(JSON.stringify(initial.questions, null, 1));
+  const [backend, setBackend] = useState<Backend>('auto');
+  const [precision, setPrecision] = useState<Precision>('fp32');
   const [status, setStatus] = useState('idle');
-  const [log, setLog] = useState([]);
-  const [pct, setPct] = useState(null);
-  const [result, setResult] = useState(null);
+  const [log, setLog] = useState<string[]>([]);
+  const [pct, setPct] = useState<number | null>(null);
+  const [result, setResult] = useState<Extract<WorkerResponse, { type: 'done' }> | null>(null);
 
   useEffect(() => {
-    const onMsg = (e) => {
+    const onMsg = (e: MessageEvent<WorkerResponse>): void => {
       const m = e.data;
       if (m.type === 'progress') {
         setLog((l) => [...l, m.stage]);
@@ -27,7 +33,7 @@ export function PlaygroundTab() {
         setStatus('ready');
         setPct(null);
       } else if (m.type === 'error') {
-        setStatus('error: ' + m.message);
+        setStatus(`error: ${m.message}`);
         setPct(null);
       }
     };
@@ -35,16 +41,21 @@ export function PlaygroundTab() {
     return () => worker.removeEventListener('message', onMsg);
   }, [worker]);
 
-  const applyPreset = (name) => {
+  const applyPreset = (name: string): void => {
+    const p = PRESETS[name];
+    if (!p) {
+      setStatus(`unknown preset: ${name}`);
+      return;
+    }
     setPreset(name);
-    setStateText(JSON.stringify(PRESETS[name].state, null, 1));
-    setQText(JSON.stringify(PRESETS[name].questions, null, 1));
+    setStateText(JSON.stringify(p.state, null, 1));
+    setQText(JSON.stringify(p.questions, null, 1));
   };
 
-  const run = () => {
+  const run = (): void => {
     try {
-      const state = JSON.parse(stateText),
-        questions = JSON.parse(qText);
+      const state: unknown = JSON.parse(stateText) as unknown;
+      const questions = JSON.parse(qText) as Questions;
       if (!questions || !Object.keys(questions).length) {
         setStatus('invalid: no questions');
         return;
@@ -55,7 +66,7 @@ export function PlaygroundTab() {
       setPct(null);
       worker.postMessage({ state, questions, backend, precision });
     } catch (err) {
-      setStatus('invalid JSON: ' + err.message);
+      setStatus(`invalid JSON: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 
@@ -70,7 +81,7 @@ export function PlaygroundTab() {
             ))}
           </select>
           <label htmlFor="backend">Backend</label>
-          <select id="backend" value={backend} onChange={(e) => setBackend(e.target.value)}>
+          <select id="backend" value={backend} onChange={(e) => setBackend(e.target.value as Backend)}>
             <option value="auto">auto (webgpu→wasm)</option>
             <option value="webgpu">webgpu</option>
             <option value="wasm">wasm</option>
@@ -79,7 +90,7 @@ export function PlaygroundTab() {
           <select
             id="precision"
             value={precision}
-            onChange={(e) => setPrecision(e.target.value)}
+            onChange={(e) => setPrecision(e.target.value as Precision)}
             title="FP16 halves download; WebGPU FP16 is fast but 40× less accurate — see Progress"
           >
             <option value="fp32">fp32 (1.6GB)</option>

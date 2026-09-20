@@ -3,24 +3,25 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./laya": "./laya.mjs",
-    "./preprocess": "./laya-preprocess.mjs",
-    "./postprocess": "./laya-postprocess.mjs",
-    "./action": "./laya-action.mjs",
-    "./bpe": "./laya-bpe.mjs",
-    "./feed": "./laya-feed.mjs",
-    "./errors": "./laya-errors.mjs"
+    "./laya": "./laya.ts",
+    "./preprocess": "./laya-preprocess.ts",
+    "./postprocess": "./laya-postprocess.ts",
+    "./action": "./laya-action.ts",
+    "./bpe": "./laya-bpe.ts",
+    "./feed": "./laya-feed.ts",
+    "./errors": "./laya-errors.ts",
+    "./types": "./laya-types.ts"
   },
   "scripts": {
-    "test": "node --test tests/*.test.mjs",
-    "check:bpe": "node check-bpe.mjs",
-    "check:bpe-fuzz": "node check-bpe-fuzz.mjs",
-    "check:tokenizer": "node check-tokenizer.mjs",
-    "check:split": "node check-split.mjs",
-    "check:node": "node run-node.mjs",
-    "check:versions": "node check-versions.mjs",
+    "test": "node --test tests/*.test.ts",
+    "check:bpe": "node check-bpe.ts",
+    "check:bpe-fuzz": "node check-bpe-fuzz.ts",
+    "check:tokenizer": "node check-tokenizer.ts",
+    "check:split": "node check-split.ts",
+    "check:node": "node run-node.ts",
+    "check:versions": "node check-versions.ts",
     "check": "npm run check:bpe && npm run check:bpe-fuzz && npm run check:split",
-    "lint": "eslint .",
+    "lint": "oxlint",
     "format:check": "oxfmt --check .",
     "format": "oxfmt --write .",
     "typecheck": "tsc --noEmit"
@@ -30,9 +31,9 @@
   },
   "devDependencies": {
     "@huggingface/transformers": "4.3.0",
-    "eslint": "^9.28.0",
     "onnxruntime-web": "1.30.0",
     "oxfmt": "^0.68.0",
+    "oxlint": "^1.81.0",
     "typescript": "^5.9.0"
   },
   "overrides": {
@@ -40,10 +41,10 @@
     "onnxruntime-common": "1.30.0"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "bin": {
-    "laya": "./cli.mjs"
+    "laya": "./cli.ts"
   },
-  "description": "Portable Laya runtime: BPE tokenizer, ONNX decisions, calibration (Node.js)"
+  "description": "Portable Laya runtime: BPE tokenizer, ONNX decisions, calibration (Node.js + TypeScript)"
 }

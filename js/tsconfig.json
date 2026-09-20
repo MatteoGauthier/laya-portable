@@ -1,15 +1,15 @@
 {
   "compilerOptions": {
-    "allowJs": true,
-    "checkJs": true,
-    "strict": true,
-    "noImplicitAny": false,
-    "noUncheckedIndexedAccess": false,
+    "target": "ES2022",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "target": "ES2022",
-    "noEmit": true,
-    "skipLibCheck": true
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+    "allowImportingTsExtensions": true,
+    "skipLibCheck": true,
+    "noEmit": true
   },
-  "include": ["*.mjs", "tests/*.mjs"]
+  "include": ["*.ts", "tests/*.ts"]
 }

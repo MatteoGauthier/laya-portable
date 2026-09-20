@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
-import { PlaygroundTab } from './components/PlaygroundTab.jsx';
-import { ProgressTab } from './components/ProgressTab.jsx';
-import { InspectorTab } from './components/InspectorTab.jsx';
+import { PlaygroundTab } from './components/PlaygroundTab.tsx';
+import { ProgressTab } from './components/ProgressTab.tsx';
+import { InspectorTab } from './components/InspectorTab.tsx';
 
 const TABS = [
   { id: 'play', label: 'Playground' },
   { id: 'prog', label: 'Progress' },
   { id: 'insp', label: 'Inspector' },
-];
+] as const;
 
-export default function App() {
-  const [tab, setTab] = useState('play');
+type TabId = (typeof TABS)[number]['id'];
+
+export default function App(): React.JSX.Element {
+  const [tab, setTab] = useState<TabId>('play');
   return (
     <div className="app">
       <header>

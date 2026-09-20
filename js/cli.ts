@@ -1,15 +1,17 @@
 #!/usr/bin/env node
-// @ts-nocheck — CLI harness (covered by tests/ + runtime guards)
 // laya CLI: run calibrated decisions from JSON state + questions.
 //
-//   node cli.mjs [--fp16] [--state '{"subject":".."}'] [--questions '{...}']
-//   node cli.mjs --state-file s.json --questions-file q.json [--model path.onnx]
-//   node cli.mjs --help | --json
+//   node cli.ts [--fp16] [--state '{"subject":".."}'] [--questions '{...}']
+//   node cli.ts --state-file s.json --questions-file q.json [--model path.onnx]
+//   node cli.ts --help | --json
+//
+// Runs directly on Node >=22 via type-stripping (no build step).
 import { readFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
-import { LayaClient, DEFAULT_MODEL } from './laya.mjs';
+import { LayaClient, DEFAULT_MODEL } from './laya.ts';
+import type { Questions } from './laya-types.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -30,17 +32,17 @@ const { values } = parseArgs({
 if (values.help) {
   console.log(`laya — calibrated ONNX decisions
 Usage:
-  node cli.mjs [--model path.onnx | --fp16] [--state JSON] [--questions JSON]
+  node cli.ts [--model path.onnx | --fp16] [--state JSON] [--questions JSON]
                [--state-file f] [--questions-file f] [--json]
 Defaults to ${DEFAULT_MODEL}`);
   process.exit(0);
 }
 
-const DEFAULT_STATE = {
+const DEFAULT_STATE: Record<string, string> = {
   subject: 'Duplicate charge on invoice 4411',
   body: 'We were billed twice for March. Please refund the duplicate.',
 };
-const DEFAULT_QUESTIONS = {
+const DEFAULT_QUESTIONS: Questions = {
   department: {
     type: 'choice',
     instructions: 'Which team should handle this?',
@@ -50,41 +52,48 @@ const DEFAULT_QUESTIONS = {
   churn_risk: { type: 'noul', instructions: 'Does the user threaten to cancel?' },
 };
 
-function load(inline, file, fallback, label) {
+function load(inline: string | undefined, file: string | undefined, fallback: unknown, label: string): unknown {
   try {
-    if (inline) return JSON.parse(inline);
-    if (file) return JSON.parse(readFileSync(file, 'utf8'));
+    if (inline) return JSON.parse(inline) as unknown;
+    if (file) return JSON.parse(readFileSync(file, 'utf8')) as unknown;
     return fallback;
   } catch (err) {
-    console.error(`laya: invalid ${label}: ${err.message}`);
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`laya: invalid ${label}: ${msg}`);
     process.exitCode = 1;
     throw err;
   }
 }
 
+function fail(op: string, err: unknown): never {
+  const msg = err instanceof Error ? err.message : String(err);
+  const cause =
+    err instanceof Error && err.cause ? ` (cause: ${String((err.cause as Error)?.message ?? err.cause)})` : '';
+  console.error(`laya: ${op} failed: ${msg}${cause}`);
+  process.exitCode = 1;
+  throw err;
+}
+
 const model =
   values.model ?? join(here, '..', 'models', values.fp16 ? 'laya-split-fp16.onnx' : 'laya-split-single.onnx');
 
-let laya;
+let laya: LayaClient;
 try {
   const t0 = performance.now();
   laya = await LayaClient.open({ model });
   console.error(`loaded in ${((performance.now() - t0) / 1000).toFixed(1)}s: ${basename(model)}`);
 } catch (err) {
-  console.error(`laya: open failed: ${err.message}${err.cause ? ` (cause: ${err.cause.message})` : ''}`);
-  process.exitCode = 1;
-  throw err;
+  fail('open', err);
 }
 
 try {
   const result = await laya.predict(
     load(values.state, values['state-file'], DEFAULT_STATE, 'state'),
-    load(values.questions, values['questions-file'], DEFAULT_QUESTIONS, 'questions'),
+    load(values.questions, values['questions-file'], DEFAULT_QUESTIONS, 'questions') as Questions,
   );
   console.log(JSON.stringify(result, null, values.json ? 0 : 1));
 } catch (err) {
-  console.error(`laya: predict failed: ${err.message}${err.cause ? ` (cause: ${err.cause.message})` : ''}`);
-  process.exitCode = 1;
+  fail('predict', err);
 } finally {
   await laya.close?.();
 }

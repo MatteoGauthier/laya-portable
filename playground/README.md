@@ -1,7 +1,10 @@
-# Laya playground (Vite + React)
+# Laya playground (Vite + React + TypeScript)
 
 Dev UI for the portability experiments. Grows with the project: inference today,
 quantization/device comparisons next.
+
+Strict TypeScript (`.tsx`/`.ts`, `tsc --noEmit` with `noUncheckedIndexedAccess`
++ `erasableSyntaxOnly`); OXC toolchain (`oxlint` + `oxfmt`); Vite 8 + Vitest.
 
 ```sh
 cd playground && npm install && npm run dev
@@ -19,11 +22,11 @@ Tabs: **Playground** (run text→answer in a worker, split ONNX + pure-JS BPE),
 **Progress** (phase board, parity + latency tables from `export/` + `docs/`),
 **Inspector** (tokenizer tester, fixture viewer).
 
-Structure: `src/components/` (tabs + answer cards), `src/hooks/useWorker.jsx`
+Structure: `src/components/` (tabs + answer cards), `src/hooks/useWorker.tsx`
 (single worker instance, isolated heartbeat), `src/lib/` (presets, fetchJson
-with error states). Shared inference code is imported from `../js/*.mjs` via
+with error states). Shared inference code is imported from `../js/*.ts` via
 the `@js` alias (see `vite.config.ts`).
 
 `public/` symlinks `../models`, `../js`, and the JSON reports — no copies.
-Shared inference code is imported from `../js/*.mjs` (see `vite.config.js`
+Shared inference code is imported from `../js/*.ts` (see `vite.config.ts`
 `fs.allow`). First inference run downloads 1.6GB once (dev-machine localhost).

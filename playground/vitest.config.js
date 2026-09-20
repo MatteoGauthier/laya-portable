@@ -10,8 +10,8 @@ export default defineConfig({
   resolve: { alias: { '@': resolve(root, 'src'), '@js': resolve(root, '..', 'js') } },
   test: {
     environment: 'jsdom',
-    setupFiles: ['./src/test-setup.js'],
-    include: ['src/**/*.test.{js,jsx}'],
+    setupFiles: ['./src/test-setup.ts'],
+    include: ['src/**/*.test.{ts,tsx}'],
     exclude: ['node_modules', 'dist', 'public'],
   },
 });

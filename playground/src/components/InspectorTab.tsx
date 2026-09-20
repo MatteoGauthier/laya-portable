@@ -1,25 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { loadBpeTokenizer } from '@js/laya-bpe.mjs';
-import { fetchJson } from '../lib/api.js';
-import { FIXTURE_NAMES } from '../lib/presets.js';
+import { loadBpeTokenizer } from '@js/laya-bpe.ts';
+import { fetchJson } from '../lib/api.ts';
+import { FIXTURE_NAMES } from '../lib/presets.ts';
+import type { JsFixture } from '../lib/reports.ts';
+import type { Tokenizer, TokenizerJson } from '@js/laya-types.ts';
 
-export function InspectorTab() {
-  const [tok, setTok] = useState(null);
-  const [rev, setRev] = useState(null);
-  const [tokErr, setTokErr] = useState(null);
+export function InspectorTab(): React.JSX.Element {
+  const [tok, setTok] = useState<Tokenizer | null>(null);
+  const [rev, setRev] = useState<Map<number, string> | null>(null);
+  const [tokErr, setTokErr] = useState<string | null>(null);
   const [text, setText] = useState('choice question: Which team should handle this?');
   const [fxName, setFxName] = useState('orig-3q');
-  const [fx, setFx] = useState(null);
-  const [fxErr, setFxErr] = useState(null);
+  const [fx, setFx] = useState<JsFixture | null>(null);
+  const [fxErr, setFxErr] = useState<string | null>(null);
   useEffect(() => {
     const ac = new AbortController();
-    fetchJson('/js/tokenizer/tokenizer.json', { signal: ac.signal })
+    fetchJson<TokenizerJson>('/js/tokenizer/tokenizer.json', { signal: ac.signal })
       .then((tj) => {
         setTok(loadBpeTokenizer(tj));
         setRev(new Map([...Object.entries(tj.model.vocab)].map(([k, v]) => [v, k])));
       })
-      .catch((err) => {
-        if (err.name !== 'AbortError') setTokErr(err.message);
+      .catch((err: unknown) => {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+        setTokErr(err instanceof Error ? err.message : String(err));
       });
     return () => ac.abort();
   }, []);
@@ -27,21 +30,22 @@ export function InspectorTab() {
     const ac = new AbortController();
     setFx(null);
     setFxErr(null);
-    fetchJson(`/js/fixtures/${fxName}.json`, { signal: ac.signal })
+    fetchJson<JsFixture>(`/js/fixtures/${fxName}.json`, { signal: ac.signal })
       .then(setFx)
-      .catch((err) => {
-        if (err.name !== 'AbortError') setFxErr(err.message);
+      .catch((err: unknown) => {
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+        setFxErr(err instanceof Error ? err.message : String(err));
       });
     return () => ac.abort();
   }, [fxName]);
-  let ids = [],
-    pieces = [];
+  let ids: number[] = [];
+  let pieces: string[] = [];
   if (tok) {
     try {
       ids = tok.encode(text);
-      pieces = ids.map((id) => rev.get(id) ?? `#${id}`);
+      pieces = ids.map((id) => rev?.get(id) ?? `#${id}`);
     } catch (err) {
-      pieces = ['ERROR ' + err.message];
+      pieces = [`ERROR ${err instanceof Error ? err.message : String(err)}`];
     }
   }
   return (

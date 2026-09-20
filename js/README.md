@@ -1,26 +1,30 @@
-# JS runtime + browser validation
+# JS runtime + browser validation (TypeScript)
 
 Reuses `export/fixtures/*.npz` via `js/fixtures/*.json` (emitted by
 `export/emit_js_fixtures.py`).
+
+Strict TypeScript throughout (`tsc --noEmit` with `noUncheckedIndexedAccess`
++ `erasableSyntaxOnly`): sources run directly on Node ≥22 via native
+type-stripping — no build step. Shared types in `laya-types.ts`.
 
 ```sh
 cd js && npm install && npm test && npm run check
 # ORT model checks (need models/, gitignored): npm run check:split && npm run check:node
 # lint/format/types: npm run lint && npm run format:check && npm run typecheck
-# CLI: node cli.mjs --help
+# CLI: node cli.ts --help
 ```
 
-Shared modules: `laya-feed.mjs` (ORT feed builder, single copy),
-`laya-errors.mjs` (typed errors), `laya-act-bin.mjs` (1.1MB binary head —
+Shared modules: `laya-feed.ts` (ORT feed builder, single copy),
+`laya-errors.ts` (typed errors), `laya-act-bin.ts` (1.1MB binary head —
 `export/emit_act_bin.py`; falls back to `act_head.json`). Default model is
-`models/laya-split-single.onnx` everywhere (`DEFAULT_MODEL` in `laya.mjs`).
+`models/laya-split-single.onnx` everywhere (`DEFAULT_MODEL` in `laya.ts`).
 
 ## Node.js (onnxruntime-node 1.30.0)
 
-- `run-node.mjs`: PASS all 5, identical diffs to Python ORT (logits ≤7.7e-06).
-- `check-tokenizer.mjs`: PASS all 5, transformers.js token IDs match Python exactly.
-- `check-bpe.mjs` / `check-bpe-fuzz.mjs`: PASS 5/5 + 206/206, pure-JS BPE matches Python.
-- `check-split.mjs`: PASS all 5, split ORT + JS action head matches torch.
+- `run-node.ts`: PASS all 5, identical diffs to Python ORT (logits ≤7.7e-06).
+- `check-tokenizer.ts`: PASS all 5, transformers.js token IDs match Python exactly.
+- `check-bpe.ts` / `check-bpe-fuzz.ts`: PASS 5/5 + 206/206, pure-JS BPE matches Python.
+- `check-split.ts`: PASS all 5, split ORT + JS action head matches torch.
 
 ## Browser (onnxruntime-web 1.30.0, headless Chrome, Metal GPU)
 
@@ -58,9 +62,9 @@ download % and backend selection. Verified billing 0.967 / 63 tokens, matching
 
 ## Tokenizer: pure-JS BPE, no bundler
 
-`js/laya-bpe.mjs` implements ByteLevel BPE from `tokenizer.json` (NFC, added
+`js/laya-bpe.ts` implements ByteLevel BPE from `tokenizer.json` (NFC, added
 longest-match with `[MASK]` lstrip, GPT-2 regex, byte mapping, rank merges).
-`check-bpe.mjs` PASS 5/5 fixtures; `check-bpe-fuzz.mjs` PASS 206/206
+`check-bpe.ts` PASS 5/5 fixtures; `check-bpe-fuzz.ts` PASS 206/206
 (unicode, spaces, added tokens). transformers.js needs a bundler in browser
 (bare `onnxruntime-*` deps; verified FAILs via bare CDN/esm.sh/Hub), so the
 worker uses the dependency-free port with `tokenizer.json` + `rl_agent_config.json`

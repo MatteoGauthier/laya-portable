@@ -1,9 +1,23 @@
 import React from 'react';
-import { useJson } from '../lib/api.js';
+import type { ReactNode } from 'react';
+import { useJson } from '../lib/api.ts';
+import type { AccuracyReport, BaselineReport, Fp16Report, ParityReport } from '../lib/reports.ts';
 
 // Tables render from JSON reports; phase board stays a curated snapshot
 // (it summarizes process state, not a single report file).
-function ReportTable({ title, data, error, columns, rows }) {
+function ReportTable<T>({
+  title,
+  data,
+  error,
+  columns,
+  rows,
+}: {
+  title: string;
+  data: T | null;
+  error: string | null;
+  columns: string[];
+  rows: (d: T) => ReactNode;
+}): React.JSX.Element {
   return (
     <>
       <h3>{title}</h3>
@@ -29,11 +43,11 @@ function ReportTable({ title, data, error, columns, rows }) {
   );
 }
 
-export function ProgressTab() {
-  const [parity, parityErr] = useJson('/reports/parity-report.json');
-  const [baseline, baselineErr] = useJson('/reports/mac-baseline.json');
-  const [fp16, fp16Err] = useJson('/reports/fp16-parity.json');
-  const [acc, accErr] = useJson('/reports/accuracy-report.json');
+export function ProgressTab(): React.JSX.Element {
+  const [parity, parityErr] = useJson<ParityReport>('/reports/parity-report.json');
+  const [baseline, baselineErr] = useJson<BaselineReport>('/reports/mac-baseline.json');
+  const [fp16, fp16Err] = useJson<Fp16Report>('/reports/fp16-parity.json');
+  const [acc, accErr] = useJson<AccuracyReport>('/reports/accuracy-report.json');
   return (
     <div>
       <h3>Phase board</h3>

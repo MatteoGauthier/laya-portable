@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { ProbBar, AnswerCard } from './answers.jsx';
+import { ProbBar, AnswerCard } from './answers.tsx';
+import type { Answer } from '@js/laya-types.ts';
 
 describe('ProbBar', () => {
   it('renders label + value with progressbar role', () => {
@@ -14,25 +15,20 @@ describe('ProbBar', () => {
 
 describe('AnswerCard', () => {
   it('renders choice with probabilities', () => {
-    render(
-      <AnswerCard
-        qid="dept"
-        answer={{
-          type: 'choice',
-          choice: 'billing',
-          probabilities: { billing: 0.8, tech: 0.2 },
-          confidence: 0.5,
-          action: { act_probability: 0.9 },
-        }}
-      />,
-    );
+    const answer: Answer = {
+      type: 'choice',
+      choice: 'billing',
+      probabilities: { billing: 0.8, tech: 0.2 },
+      confidence: 0.5,
+      action: { act_probability: 0.9 },
+    };
+    render(<AnswerCard qid="dept" answer={answer} />);
     expect(screen.getByText('dept')).toBeInTheDocument();
     expect(screen.getByText('→ billing')).toBeInTheDocument();
   });
   it('renders noul', () => {
-    render(
-      <AnswerCard qid="risk" answer={{ type: 'noul', noul: 0.1, confidence: 0.9, action: { act_probability: 0.9 } }} />,
-    );
+    const answer: Answer = { type: 'noul', noul: 0.1, confidence: 0.9, action: { act_probability: 0.9 } };
+    render(<AnswerCard qid="risk" answer={answer} />);
     expect(screen.getByText('→ 0.1')).toBeInTheDocument();
   });
 });

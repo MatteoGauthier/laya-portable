@@ -14,12 +14,12 @@ cd playground && npm install && npm run dev
 
 ```sh
 # CLI (Node.js, split FP32 model; add --fp16 for the 806MB variant)
-cd js && npm install && node cli.mjs
+cd js && npm install && node cli.ts
 ```
 
 ```js
 // SDK
-import { LayaClient } from './laya.mjs';
+import { LayaClient } from './laya.ts';
 const laya = await LayaClient.open(); // { model, tokenizer, providers }
 console.log(await laya.predict(state, questions));
 ```

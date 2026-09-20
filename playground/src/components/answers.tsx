@@ -1,6 +1,7 @@
 import React from 'react';
+import type { Answer } from '@js/laya-types.ts';
 
-export function ProbBar({ label, value }) {
+export function ProbBar({ label, value }: { label: string; value: number }): React.JSX.Element {
   return (
     <div className="prob">
       <span className="prob-label">{label}</span>
@@ -18,7 +19,7 @@ export function ProbBar({ label, value }) {
   );
 }
 
-export function AnswerCard({ qid, answer }) {
+export function AnswerCard({ qid, answer }: { qid: string; answer: Answer }): React.JSX.Element {
   return (
     <div className="card">
       <div className="card-head">
@@ -37,7 +38,7 @@ export function AnswerCard({ qid, answer }) {
         <>
           <div className="choice">→ {answer.score}</div>
           {Object.entries(answer.probabilities).map(([k, v]) => (
-            <ProbBar key={k} label={`${k} ${answer.legend[k]}`} value={v} />
+            <ProbBar key={k} label={`${k} ${String(answer.legend[k])}`} value={v} />
           ))}
         </>
       )}
