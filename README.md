@@ -7,6 +7,10 @@ tokenizer, same calibration, same answers.
 
 ## Try it
 
+New here? Start with [`docs/usage.md`](docs/usage.md) (all four entry points,
+troubleshooting, porting notes). Making it fast? [`docs/performance.md`](docs/performance.md)
+(timings, knob matrix, batching checklist).
+
 ```sh
 # Interactive dev UI (inference, progress tables, tokenizer inspector)
 cd apps/playground && npm install && npm run dev

@@ -1,6 +1,13 @@
 import React from 'react';
 import type { ReactNode } from 'react';
-import type { AccuracyReport, BaselineReport, Fp16Report, Head2HeadReport, ParityReport, PublicBenchmarkReport } from '../lib/reports.ts';
+import type {
+  AccuracyReport,
+  BaselineReport,
+  Fp16Report,
+  Head2HeadReport,
+  ParityReport,
+  PublicBenchmarkReport,
+} from '../lib/reports.ts';
 import parityData from '@laya/test-vectors/reports/parity-report.json';
 import baselineData from '@laya/test-vectors/reports/mac-baseline.json';
 import fp16Data from '@laya/test-vectors/reports/fp16-parity.json';

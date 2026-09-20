@@ -20,6 +20,8 @@ import type {
 } from './laya-types.ts';
 
 import {
+  CHECKPOINT_ACT_BIN,
+  CHECKPOINT_ACT_META,
   DEFAULT_ACT_HEAD_BIN,
   DEFAULT_ACT_HEAD_JSON,
   DEFAULT_ACT_HEAD_META,
@@ -43,6 +45,9 @@ export interface LayaOpenOptions {
   tokenizer?: string;
   config?: string;
   actHead?: string;
+  /** Binary act-head weights (preferred over actHead JSON). Per-checkpoint in B2. */
+  actHeadBin?: string;
+  actHeadMeta?: string;
   providers?: string[];
 }
 
@@ -82,19 +87,38 @@ export class LayaClient {
       throw new LayaConfigError(`cannot load model: ${modelPath}`, { cause: err });
     }
     // act_head: prefer binary fast path (1.1MB f32) over JSON (5.2MB text).
-    if (!opts.actHead) {
-      if (existsSync(DEFAULT_ACT_HEAD_BIN) && existsSync(DEFAULT_ACT_HEAD_META)) {
+    // Per-checkpoint bins (B2): resolve from model path when the caller did
+    // not pass explicit actHead/actHeadBin (english keeps legacy defaults).
+    const isMultilingual = modelPath.includes('multilingual');
+    const isTyped = modelPath.includes('typed-decisions');
+    const perModelBin = isMultilingual
+      ? CHECKPOINT_ACT_BIN['multilingual']
+      : isTyped
+        ? CHECKPOINT_ACT_BIN['typed-decisions']
+        : DEFAULT_ACT_HEAD_BIN;
+    const perModelMeta = isMultilingual
+      ? CHECKPOINT_ACT_META['multilingual']
+      : isTyped
+        ? CHECKPOINT_ACT_META['typed-decisions']
+        : DEFAULT_ACT_HEAD_META;
+    if (!opts.actHead && !opts.actHeadBin) {
+      const binPath = opts.actHeadBin ?? perModelBin;
+      const metaPath = opts.actHeadMeta ?? perModelMeta;
+      if (existsSync(binPath) && existsSync(metaPath)) {
         try {
           const { loadActBin } = await import('./laya-act-bin.ts');
-          c.actW = loadActBin(DEFAULT_ACT_HEAD_BIN, DEFAULT_ACT_HEAD_META);
+          c.actW = loadActBin(binPath, metaPath);
         } catch (err) {
           throw new LayaConfigError('invalid act_head.bin', { cause: err });
         }
       } else {
         c.actW = readJson(DEFAULT_ACT_HEAD_JSON, 'act_head') as ActHeadWeights;
       }
+    } else if (opts.actHeadBin) {
+      const { loadActBin } = await import('./laya-act-bin.ts');
+      c.actW = loadActBin(opts.actHeadBin, opts.actHeadMeta ?? perModelMeta);
     } else {
-      c.actW = readJson(opts.actHead, 'act_head') as ActHeadWeights;
+      c.actW = readJson(opts.actHead as string, 'act_head') as ActHeadWeights;
     }
     if (!cfgJson.temperature || !cfgJson.temperature_by_options) {
       throw new LayaConfigError('config missing temperature tables');
@@ -124,6 +148,7 @@ export class LayaClient {
       throw new RangeError(`predict: too many questions (${qids.length} > 32)`);
     }
     const t0 = performance.now();
+    const tTok = performance.now();
     const items: BuiltItem[] = qids.map((qid) => {
       const qdef = questions[qid];
       if (qdef === undefined) throw new LayaEncodeError(`predict: missing question ${qid}`);
@@ -133,6 +158,8 @@ export class LayaClient {
     });
     const b = collateItems([items], this.tok.padId);
     const d = toFeedData(b);
+    const tokenizeMs = performance.now() - tTok;
+    const tInf = performance.now();
     const out = await this.sess.run({
       input_ids: new ort.Tensor('int64', d.inputIds, [d.dims.B, d.dims.S]),
       attention_mask: new ort.Tensor('int64', d.attentionMask, [d.dims.B, d.dims.S]),
@@ -143,6 +170,8 @@ export class LayaClient {
     const logitsTensor = out['logits'];
     const pooledTensor = out['pooled'];
     if (!logitsTensor || !pooledTensor) throw new LayaEncodeError('predict: model missing logits/pooled outputs');
+    const inferenceMs = performance.now() - tInf;
+    const tPost = performance.now();
     const { logits, pooled } = splitOutputs(
       Array.from(logitsTensor.data as ArrayLike<number>),
       Array.from(pooledTensor.data as ArrayLike<number>),
@@ -152,7 +181,12 @@ export class LayaClient {
     const act = actionLogits(logits, b.markerMask, pooled, this.actW);
     const nTokens = b.attentionMask.flat().reduce((a, v) => a + v, 0);
     const result = predictFromLogits(questions, items, logits, act, this.temp, nTokens);
-    result.timings = { total_ms: Math.round(performance.now() - t0) };
+    result.timings = {
+      tokenize_ms: Math.round(tokenizeMs),
+      inference_ms: Math.round(inferenceMs),
+      postprocess_ms: Math.round(performance.now() - tPost),
+      total_ms: Math.round(performance.now() - t0),
+    };
     return result;
   }
 }

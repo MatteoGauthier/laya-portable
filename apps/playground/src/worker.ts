@@ -102,14 +102,14 @@ workerSelf.onmessage = (e: MessageEvent<WorkerRequest>) => {
     const modelTag = precision === 'fp16' ? 'fp16' : 'fp32';
     try {
       const t0 = performance.now();
+      // Setup-phase marks for the waterfall (0 when served from cache/session).
+      let downloadMs = 0;
+      let sessionMs = 0;
       if (!tok) {
         post({ type: 'progress', stage: 'tokenizer' });
         // Parallelize tokenizer + config (was sequential); cached after first visit.
         const noop = (_pct: number): void => undefined;
-        const [tjBytes, cfgBytes] = await Promise.all([
-          cachedBytes(tokenizerUrl, noop),
-          cachedBytes(configUrl, noop),
-        ]);
+        const [tjBytes, cfgBytes] = await Promise.all([cachedBytes(tokenizerUrl, noop), cachedBytes(configUrl, noop)]);
         const tj = JSON.parse(new TextDecoder().decode(tjBytes)) as TokenizerJson;
         const cfg = JSON.parse(new TextDecoder().decode(cfgBytes)) as {
           temperature: number[];
@@ -134,6 +134,7 @@ workerSelf.onmessage = (e: MessageEvent<WorkerRequest>) => {
         post({ type: 'progress', stage: `model-${backend}-${modelTag}` });
         // Cache-first: repeat visits skip the download entirely (no pct events).
         let bytes: Uint8Array | null = null;
+        const tDl = performance.now();
         try {
           bytes = await cachedBytes(modelUrl, (pct) => post({ type: 'download', pct }));
         } catch (err) {
@@ -141,6 +142,8 @@ workerSelf.onmessage = (e: MessageEvent<WorkerRequest>) => {
           console.warn('progress download failed, falling back:', err instanceof Error ? err.message : String(err));
           bytes = null;
         }
+        downloadMs = performance.now() - tDl;
+        const tSess = performance.now();
         const tryBackends = backend === 'auto' ? ['webgpu', 'wasm'] : [backend];
         let lastErr: unknown = null;
         for (const ep of tryBackends) {
@@ -174,15 +177,14 @@ workerSelf.onmessage = (e: MessageEvent<WorkerRequest>) => {
           cachedBytes(actBinUrl, noopAct),
           cachedBytes(actMetaUrl, noopAct),
         ]);
-        actW = parseActHeadBin(
-          binBytes,
-          JSON.parse(new TextDecoder().decode(metaBytes)) as ActHeadMeta,
-        );
+        actW = parseActHeadBin(binBytes, JSON.parse(new TextDecoder().decode(metaBytes)) as ActHeadMeta);
+        sessionMs = performance.now() - tSess;
       }
       const session = sess;
       const weights = actW;
       if (!session || !weights) throw new Error('session not ready');
       post({ type: 'progress', stage: 'tokenize' });
+      const tTok = performance.now();
       const ids = Object.keys(questions);
       if (!ids.length) throw new Error('no questions');
       const items: BuiltItem[] = ids.map((qid) => {
@@ -202,9 +204,11 @@ workerSelf.onmessage = (e: MessageEvent<WorkerRequest>) => {
         qtype: new ort.Tensor('int64', d.qtype, [d.dims.B]),
       };
       post({ type: 'progress', stage: 'inference' });
+      const tokenizeMs = performance.now() - tTok;
       const t1 = performance.now();
       const r = await session.run(feeds);
-      const inferMs = performance.now() - t1;
+      const inferenceMs = performance.now() - t1;
+      const tPost = performance.now();
       const logitsTensor = r['logits'];
       const pooledTensor = r['pooled'];
       if (!logitsTensor || !pooledTensor) throw new Error('model missing logits/pooled outputs');
@@ -217,11 +221,18 @@ workerSelf.onmessage = (e: MessageEvent<WorkerRequest>) => {
       const act = actionLogits(logits, b.markerMask, pooled, weights);
       const nTokens = b.attentionMask.flat().reduce((a, v) => a + v, 0);
       const result = predictFromLogits(questions, items, logits, act, temps, nTokens);
+      const timings = {
+        tokenize_ms: Math.round(tokenizeMs),
+        inference_ms: Math.round(inferenceMs),
+        postprocess_ms: Math.round(performance.now() - tPost),
+        total_ms: Math.round(performance.now() - t0),
+      };
+      result.timings = timings;
       post({
         type: 'done',
         result,
-        inferMs: Math.round(inferMs),
-        totalMs: Math.round(performance.now() - t0),
+        timings,
+        setup: { download_ms: Math.round(downloadMs), session_ms: Math.round(sessionMs) },
         backend: readyBackend ?? 'unknown',
         model: readyModel ?? modelTag,
         seqLen: d.dims.S,

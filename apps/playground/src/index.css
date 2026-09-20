@@ -195,6 +195,56 @@ pre {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+.waterfall {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.wf-row {
+  display: grid;
+  grid-template-columns: 110px 1fr 70px;
+  gap: 8px;
+  align-items: center;
+  margin: 3px 0;
+  font-size: 12px;
+}
+.wf-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--dim);
+}
+.wf-track {
+  background: #0b0e12;
+  border-radius: 4px;
+  height: 10px;
+  position: relative;
+}
+.wf-fill {
+  height: 10px;
+  border-radius: 4px;
+  min-width: 0;
+}
+.wf-setup {
+  background: #6e7681;
+}
+.wf-compute {
+  background: var(--acc);
+}
+.wf-overhead {
+  background: repeating-linear-gradient(45deg, #3a4552, #3a4552 4px, #2a323d 4px, #2a323d 8px);
+}
+.wf-val {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.wf-total {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--dim);
+}
 table {
   border-collapse: collapse;
   width: 100%;

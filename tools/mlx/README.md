@@ -22,10 +22,10 @@ full/sliding attention, norm-first ReLU head layers, biased scorer LayerNorm.
 
 ## Measured (M4 Pro, choice-3 B=1 S=63)
 
-| Variant | Logits vs torch | Action rel. | Forward p50 |
-|---|---:|---:|---:|
-| MLX FP32 | ≤1.5e-05 (5/5) | ≤1.3e-06 | **19.3ms** |
-| Torch MPS | — | — | 21.8ms (baseline doc) |
+| Variant   | Logits vs torch | Action rel. |           Forward p50 |
+| --------- | --------------: | ----------: | --------------------: |
+| MLX FP32  |  ≤1.5e-05 (5/5) |    ≤1.3e-06 |            **19.3ms** |
+| Torch MPS |               — |           — | 21.8ms (baseline doc) |
 
 MLX beats MPS torch unoptimized on first attempt. Intermediate hidden states
 drift up to ~0.3 deep in the stack (eager-vs-SDPA accumulation) while outputs

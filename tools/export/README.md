@@ -140,11 +140,11 @@ Labelled accuracy on public HF datasets (needs network for data only;
 weights stay cached). Community ONNX is interface-excluded everywhere
 below — every suite needs K≥4, its graph is fixed K=2:
 
-| Suite (n) | torch | ours fp32 | ours fp16 | Upstream published | Note |
-|---|---:|---:|---:|---:|---|
-| AG News 4-way (200) | 0.935 | 0.935 | 0.935 | 0.950–0.953 | bare-key prompts vs tuned; credible |
-| Emotion 6-way (150) | 0.520 | 0.520 | 0.527 | 0.595–0.600 | gap was sample size: full test n=2000 scores torch 0.587, matching published; prompt variants (descriptions, reword, raw state) never moved the 150-sample result |
-| banking77 77-way (154) | 0.435 | 0.435 | 0.429 | 0.425 | reproduces the option-budget ceiling |
+| Suite (n)              | torch | ours fp32 | ours fp16 | Upstream published | Note                                                                                                                                                              |
+| ---------------------- | ----: | --------: | --------: | -----------------: | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AG News 4-way (200)    | 0.935 |     0.935 |     0.935 |        0.950–0.953 | bare-key prompts vs tuned; credible                                                                                                                               |
+| Emotion 6-way (150)    | 0.520 |     0.520 |     0.527 |        0.595–0.600 | gap was sample size: full test n=2000 scores torch 0.587, matching published; prompt variants (descriptions, reword, raw state) never moved the 150-sample result |
+| banking77 77-way (154) | 0.435 |     0.435 |     0.429 |              0.425 | reproduces the option-budget ceiling                                                                                                                              |
 
 Ours matches torch everywhere (FP16: one extra emotion hit from drift noise).
 banking77 ECE 0.54 — confident at the ceiling, same theme as upstream's

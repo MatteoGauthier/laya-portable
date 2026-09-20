@@ -95,7 +95,18 @@ export interface PredictResult {
   model: string;
   answers: Record<string, Answer>;
   usage: { input_tokens: number; output_tokens: number };
-  timings?: { total_ms: number };
+  timings?: PredictTimings;
+}
+
+export interface PredictTimings {
+  /** BPE + sequence building + feed flattening. */
+  tokenize_ms: number;
+  /** ORT session.run only. */
+  inference_ms: number;
+  /** Split outputs + CPU action head + calibration. */
+  postprocess_ms: number;
+  /** End-to-end wall time. */
+  total_ms: number;
 }
 
 /** Minimal shape of tokenizer.json needed by the pure-JS BPE loader. */
@@ -118,6 +129,10 @@ export type WorkerRequest = {
   questions: Questions;
   backend?: 'auto' | 'webgpu' | 'wasm';
   precision?: 'fp32' | 'fp16';
+  /** B1/B2 routing: 'auto' runs JS detection, explicit name pins a checkpoint. */
+  checkpoint?: 'auto' | 'english' | 'multilingual' | 'typed-decisions';
+  model?: 'english' | 'multilingual' | 'typed-decisions';
+  lang?: string;
 };
 
 export type WorkerResponse =
@@ -126,11 +141,12 @@ export type WorkerResponse =
   | {
       type: 'done';
       result: PredictResult;
-      inferMs: number;
-      totalMs: number;
+      timings: PredictTimings;
+      setup: { download_ms: number; session_ms: number };
       backend: string;
       model: string;
       seqLen: number;
       kmax: number;
+      routing?: { model: string; reason: string };
     }
   | { type: 'error'; message: string };

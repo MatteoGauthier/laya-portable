@@ -2,10 +2,57 @@ import React, { useEffect, useState } from 'react';
 import { useWorker, Heartbeat } from '../hooks/useWorker.tsx';
 import { PRESETS } from '../lib/presets.ts';
 import { AnswerCard } from '../components/answers.tsx';
+import { Waterfall } from '../components/waterfall.tsx';
 import type { Questions, WorkerResponse } from '@laya/js/laya-types.ts';
 
-type Backend = 'auto' | 'webgpu' | 'wasm';
-type Precision = 'fp32' | 'fp16';
+export type Backend = 'auto' | 'webgpu' | 'wasm';
+export type Precision = 'fp32' | 'fp16';
+
+export function stageLabel(s: string): string {
+  if (s === 'tokenizer') return 'Tokenizer loaded';
+  if (s.startsWith('model-')) return `Model fetched (${s.slice('model-'.length)})`;
+  if (s.startsWith('backend-')) return `Backend ready (${s.slice('backend-'.length)})`;
+  if (s === 'tokenize') return 'Tokenized input';
+  if (s === 'inference') return 'Ran inference';
+  return s;
+}
+
+export function isSetupStage(s: string): boolean {
+  return s === 'tokenizer' || s.startsWith('model-') || s.startsWith('backend-');
+}
+
+export function compactJson(text: string): string {
+  return JSON.stringify(JSON.parse(text) as unknown);
+}
+
+export function nodeSnippet(stateText: string, qText: string): string {
+  return [
+    "import { LayaClient } from '@laya/js';",
+    '',
+    'const laya = await LayaClient.open();',
+    `const result = await laya.predict(${compactJson(stateText)}, ${compactJson(qText)});`,
+    'console.log(result.answers, result.timings);',
+    'await laya.close();',
+    '',
+  ].join('\n');
+}
+
+export function cliSnippet(stateText: string, qText: string, precision: Precision): string {
+  const fp = precision === 'fp16' ? ' --fp16' : '';
+  return `node bin/cli.ts${fp} --state '${compactJson(stateText)}' --questions '${compactJson(qText)}'\n`;
+}
+
+export function browserSnippet(stateText: string, qText: string, backend: Backend, precision: Precision): string {
+  return [
+    "const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });",
+    'worker.onmessage = (e) => {',
+    "  if (e.data.type === 'done') console.log(e.data.result.answers, e.data.timings);",
+    "  if (e.data.type === 'error') console.error(e.data.message);",
+    '};',
+    `worker.postMessage({ state: ${compactJson(stateText)}, questions: ${compactJson(qText)}, backend: '${backend}', precision: '${precision}' });`,
+    '',
+  ].join('\n');
+}
 
 export function PlaygroundTab(): React.JSX.Element {
   const worker = useWorker();
@@ -20,6 +67,20 @@ export function PlaygroundTab(): React.JSX.Element {
   const [log, setLog] = useState<string[]>([]);
   const [pct, setPct] = useState<number | null>(null);
   const [result, setResult] = useState<Extract<WorkerResponse, { type: 'done' }> | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const copySnippet = (label: string, build: () => string): void => {
+    let text: string;
+    try {
+      text = build();
+    } catch {
+      return;
+    }
+    if (!navigator.clipboard) return;
+    navigator.clipboard.writeText(text).catch(() => undefined);
+    setCopied(label);
+    setTimeout(() => setCopied((c) => (c === label ? null : c)), 1500);
+  };
 
   useEffect(() => {
     const onMsg = (e: MessageEvent<WorkerResponse>): void => {
@@ -117,9 +178,28 @@ export function PlaygroundTab(): React.JSX.Element {
         />
         <div className="status" role="status">
           status: <b>{status}</b>
-          {pct !== null && ` · download ${pct}%`}
+          {pct !== null && (
+            <>
+              {' · download '}
+              <progress value={pct} max={100} aria-label="model download percent">
+                {pct}%
+              </progress>{' '}
+              {pct}%
+            </>
+          )}
         </div>
-        {log.length > 0 && <div className="log">{log.join(' → ')}</div>}
+        {log.length > 0 && (
+          <div className="log">
+            {log.some(isSetupStage) && <div>Setup (once): {log.filter(isSetupStage).map(stageLabel).join(' → ')}</div>}
+            <div>
+              This run:{' '}
+              {log
+                .filter((s) => !isSetupStage(s))
+                .map(stageLabel)
+                .join(' → ') || '…'}
+            </div>
+          </div>
+        )}
       </div>
       <div>
         {!result && (
@@ -132,8 +212,22 @@ export function PlaygroundTab(): React.JSX.Element {
         {result && (
           <>
             <div className="meta">
-              backend {result.backend} · {result.model} · infer {result.inferMs}ms · total {result.totalMs}ms · seq{' '}
-              {result.seqLen} · K {result.kmax} · tokens {result.result.usage.input_tokens}
+              backend {result.backend} · {result.model} · seq {result.seqLen} · K {result.kmax} · tokens{' '}
+              {result.result.usage.input_tokens}
+            </div>
+            <Waterfall timings={result.timings} setup={result.setup} />
+            <div className="row" aria-label="Copy this run as code">
+              <button onClick={() => copySnippet('node', () => nodeSnippet(stateText, qText))}>
+                {copied === 'node' ? 'Copied ✓' : 'Copy as Node'}
+              </button>
+              <button onClick={() => copySnippet('cli', () => cliSnippet(stateText, qText, precision))}>
+                {copied === 'cli' ? 'Copied ✓' : 'Copy as CLI'}
+              </button>
+              <button
+                onClick={() => copySnippet('browser', () => browserSnippet(stateText, qText, backend, precision))}
+              >
+                {copied === 'browser' ? 'Copied ✓' : 'Copy as browser'}
+              </button>
             </div>
             {Object.entries(result.result.answers).map(([qid, a]) => (
               <AnswerCard key={qid} qid={qid} answer={a} />

@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // laya CLI: run calibrated decisions from JSON state + questions.
 //
-//   node cli.ts [--fp16] [--state '{"subject":".."}'] [--questions '{...}']
-//   node cli.ts --state-file s.json --questions-file q.json [--model path.onnx]
-//   node cli.ts --help | --json
+//   node bin/cli.ts [--fp16] [--state '{"subject":".."}'] [--questions '{...}']
+//   node bin/cli.ts --state-file s.json --questions-file q.json [--model path.onnx]
+//   node bin/cli.ts --help | --json
 //
 // Runs directly on Node >=22 via type-stripping (no build step).
 import { readFileSync } from 'node:fs';
@@ -30,7 +30,7 @@ const { values } = parseArgs({
 if (values.help) {
   console.log(`laya — calibrated ONNX decisions
 Usage:
-  node cli.ts [--model path.onnx | --fp16] [--state JSON] [--questions JSON]
+  node bin/cli.ts [--model path.onnx | --fp16] [--state JSON] [--questions JSON]
                [--state-file f] [--questions-file f] [--json]
 Defaults to ${DEFAULT_MODEL}`);
   process.exit(0);
