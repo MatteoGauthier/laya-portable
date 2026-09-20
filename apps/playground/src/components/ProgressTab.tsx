@@ -1,11 +1,12 @@
 import React from 'react';
 import type { ReactNode } from 'react';
-import type { AccuracyReport, BaselineReport, Fp16Report, ParityReport, PublicBenchmarkReport } from '../lib/reports.ts';
+import type { AccuracyReport, BaselineReport, Fp16Report, Head2HeadReport, ParityReport, PublicBenchmarkReport } from '../lib/reports.ts';
 import parityData from '@laya/test-vectors/reports/parity-report.json';
 import baselineData from '@laya/test-vectors/reports/mac-baseline.json';
 import fp16Data from '@laya/test-vectors/reports/fp16-parity.json';
 import accData from '@laya/test-vectors/reports/accuracy-report.json';
 import pubData from '@laya/test-vectors/reports/public-benchmark.json';
+import h2hData from '@laya/test-vectors/reports/head2head.json';
 
 // Tables render from JSON reports; phase board stays a curated snapshot
 // (it summarizes process state, not a single report file).
@@ -55,6 +56,7 @@ export function ProgressTab(): React.JSX.Element {
   const fp16 = fp16Data as unknown as Fp16Report;
   const acc = accData as unknown as AccuracyReport;
   const pub = pubData as unknown as PublicBenchmarkReport;
+  const h2h = h2hData as unknown as Head2HeadReport;
   return (
     <div>
       <h3>Phase board</h3>
@@ -168,6 +170,28 @@ export function ProgressTab(): React.JSX.Element {
               </td>
             </tr>
           ))
+        }
+      />
+      <ReportTable
+        title="Head-to-head forward p50 (same fixtures, 5 warmup/20 repeats)"
+        data={h2h}
+        error={null}
+        columns={['fixture', 'torch-cpu', 'onnx-cpu', 'mlx', 'torch-mps']}
+        rows={(d) =>
+          Object.entries(d.fixtures).map(([fname, f]) => {
+            const mps: [number, number] | string = f['torch-mps'] ?? 'n/a';
+            return (
+              <tr key={fname}>
+                <td>
+                  {fname} (B={f.batch} S={f.seq})
+                </td>
+                <td>{f['torch-cpu'][0].toFixed(1)}ms</td>
+                <td>{f['onnx-cpu'][0].toFixed(1)}ms</td>
+                <td>{f.mlx[0].toFixed(1)}ms</td>
+                <td>{typeof mps === 'string' ? 'n/a' : `${mps[0].toFixed(1)}ms`}</td>
+              </tr>
+            );
+          })
         }
       />
       <h3>Browser (measured snapshot, choice-2 B=1)</h3>

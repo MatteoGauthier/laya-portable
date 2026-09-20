@@ -16,12 +16,14 @@ import type {
   WorkerRequest,
   WorkerResponse,
 } from '@laya/js/laya-types.ts';
+import { parseActHeadBin, type ActHeadMeta } from '@laya/js/act-bin-parse.ts';
 
 // Static assets served through Vite (?url): no public/ symlinks, no absolute
 // /js/* paths. Models stay out of the bundle (dev-only /models route).
 import tokenizerUrl from '@laya/js/src/tokenizer/tokenizer.json?url';
 import configUrl from '@laya/js/src/tokenizer/rl_agent_config.json?url';
-import actHeadUrl from '@laya/test-vectors/vectors/act_head.json?url';
+import actBinUrl from '@laya/test-vectors/vectors/act_head.bin?url';
+import actMetaUrl from '@laya/test-vectors/vectors/act_head.meta.json?url';
 
 let tok: Tokenizer | null = null;
 let sess: ort.InferenceSession | null = null;
@@ -63,6 +65,36 @@ async function fetchWithProgress(url: string, onPct: (pct: number) => void): Pro
   return bytes.subarray(0, off);
 }
 
+const ASSET_CACHE = 'laya-assets-v1';
+
+// Cache-first for immutable versioned assets (tokenizer, config, act head,
+// models). First visit streams with progress and populates the cache;
+// repeat visits load from disk with no download events.
+async function cachedBytes(url: string, onPct: (pct: number) => void): Promise<Uint8Array> {
+  try {
+    const cache = await caches.open(ASSET_CACHE);
+    const hit = await cache.match(url);
+    if (hit) {
+      const buf = await hit.arrayBuffer();
+      if (buf.byteLength > 0) return new Uint8Array(buf);
+    }
+    const bytes = await fetchWithProgress(url, onPct);
+    if (bytes) {
+      try {
+        await cache.put(url, new Response(bytes.slice(), { headers: { 'content-length': String(bytes.length) } }));
+      } catch {
+        /* quota or opaque failures: run uncached */
+      }
+      return bytes;
+    }
+  } catch {
+    /* CacheStorage unavailable (private mode): fall through */
+  }
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`fetch ${url}: HTTP ${resp.status}`);
+  return new Uint8Array(await resp.arrayBuffer());
+}
+
 workerSelf.onmessage = (e: MessageEvent<WorkerRequest>) => {
   void (async () => {
     const { state, questions, backend = 'auto', precision = 'fp32' } = e.data;
@@ -72,10 +104,19 @@ workerSelf.onmessage = (e: MessageEvent<WorkerRequest>) => {
       const t0 = performance.now();
       if (!tok) {
         post({ type: 'progress', stage: 'tokenizer' });
-        // Parallelize tokenizer + config (was sequential).
-        const [tj, cfg] = await Promise.all([(await fetch(tokenizerUrl)).json(), (await fetch(configUrl)).json()]);
-        tok = loadBpeTokenizer(tj as TokenizerJson);
-        const cfgT = cfg as { temperature: number[]; temperature_by_options: Record<string, number> };
+        // Parallelize tokenizer + config (was sequential); cached after first visit.
+        const noop = (_pct: number): void => undefined;
+        const [tjBytes, cfgBytes] = await Promise.all([
+          cachedBytes(tokenizerUrl, noop),
+          cachedBytes(configUrl, noop),
+        ]);
+        const tj = JSON.parse(new TextDecoder().decode(tjBytes)) as TokenizerJson;
+        const cfg = JSON.parse(new TextDecoder().decode(cfgBytes)) as {
+          temperature: number[];
+          temperature_by_options: Record<string, number>;
+        };
+        tok = loadBpeTokenizer(tj);
+        const cfgT = cfg;
         temp = { temperature: cfgT.temperature, temperature_by_options: cfgT.temperature_by_options };
       }
       const tokenizer = tok;
@@ -91,9 +132,10 @@ workerSelf.onmessage = (e: MessageEvent<WorkerRequest>) => {
           sess = null;
         }
         post({ type: 'progress', stage: `model-${backend}-${modelTag}` });
+        // Cache-first: repeat visits skip the download entirely (no pct events).
         let bytes: Uint8Array | null = null;
         try {
-          bytes = await fetchWithProgress(modelUrl, (pct) => post({ type: 'download', pct }));
+          bytes = await cachedBytes(modelUrl, (pct) => post({ type: 'download', pct }));
         } catch (err) {
           // Fall back to ORT-direct URL load (double download, but recovers).
           console.warn('progress download failed, falling back:', err instanceof Error ? err.message : String(err));
@@ -126,7 +168,16 @@ workerSelf.onmessage = (e: MessageEvent<WorkerRequest>) => {
             `no backend worked: ${String(lastErr instanceof Error ? lastErr.message : lastErr).slice(0, 200)}`,
           );
         }
-        actW = (await (await fetch(actHeadUrl)).json()) as ActHeadWeights;
+        // Binary act head (1.1MB) over JSON (5.2MB); cached after first visit.
+        const noopAct = (_pct: number): void => undefined;
+        const [binBytes, metaBytes] = await Promise.all([
+          cachedBytes(actBinUrl, noopAct),
+          cachedBytes(actMetaUrl, noopAct),
+        ]);
+        actW = parseActHeadBin(
+          binBytes,
+          JSON.parse(new TextDecoder().decode(metaBytes)) as ActHeadMeta,
+        );
       }
       const session = sess;
       const weights = actW;

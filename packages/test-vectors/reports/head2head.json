@@ -1,0 +1,107 @@
+{
+  "warmup": 5,
+  "repeats": 20,
+  "mps_available": true,
+  "fixtures": {
+    "choice-2": {
+      "batch": 1,
+      "seq": 50,
+      "torch-cpu": [
+        65.5,
+        68.3
+      ],
+      "onnx-cpu": [
+        32.5,
+        42.9
+      ],
+      "mlx": [
+        18.9,
+        20.4
+      ],
+      "torch-mps": [
+        18.4,
+        19.9
+      ]
+    },
+    "choice-3": {
+      "batch": 1,
+      "seq": 63,
+      "torch-cpu": [
+        68.6,
+        140.5
+      ],
+      "onnx-cpu": [
+        34.4,
+        35.9
+      ],
+      "mlx": [
+        19.3,
+        20.5
+      ],
+      "torch-mps": [
+        18.7,
+        18.9
+      ]
+    },
+    "choice-6": {
+      "batch": 1,
+      "seq": 74,
+      "torch-cpu": [
+        89.7,
+        90.9
+      ],
+      "onnx-cpu": [
+        45.1,
+        61.7
+      ],
+      "mlx": [
+        23.9,
+        24.4
+      ],
+      "torch-mps": [
+        22.6,
+        27.6
+      ]
+    },
+    "orig-3q": {
+      "batch": 3,
+      "seq": 63,
+      "torch-cpu": [
+        133.5,
+        147.4
+      ],
+      "onnx-cpu": [
+        89.8,
+        92.6
+      ],
+      "mlx": [
+        36.4,
+        38.1
+      ],
+      "torch-mps": [
+        36.1,
+        36.7
+      ]
+    },
+    "mixed-batch": {
+      "batch": 3,
+      "seq": 67,
+      "torch-cpu": [
+        143.3,
+        151.5
+      ],
+      "onnx-cpu": [
+        101.2,
+        112.9
+      ],
+      "mlx": [
+        42.7,
+        44.9
+      ],
+      "torch-mps": [
+        43.5,
+        46.5
+      ]
+    }
+  }
+}

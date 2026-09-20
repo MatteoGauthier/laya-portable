@@ -68,6 +68,22 @@ export interface PublicBenchmarkReport {
   community: string;
 }
 
+export interface Head2HeadFixture {
+  batch: number;
+  seq: number;
+  'torch-cpu': [number, number];
+  'onnx-cpu': [number, number];
+  mlx: [number, number];
+  'torch-mps'?: [number, number] | string;
+}
+
+export interface Head2HeadReport {
+  warmup: number;
+  repeats: number;
+  mps_available: boolean;
+  fixtures: Record<string, Head2HeadFixture>;
+}
+
 export interface JsFixture {
   batch: number;
   seq_len: number;
