@@ -9,3 +9,5 @@ upstream/
 .huggingface/
 coverage/
 *.log
+tools/mlx/ref.npz
+*.mlpackage
