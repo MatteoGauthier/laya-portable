@@ -2,7 +2,10 @@
 
 Action head stays FP32 numpy (same as split validation). Reports raw drift,
 calibrated prob drift, confidence drift, and label flips — not just labels.
+
+Usage: .venv/bin/python export/check_fp16.py [--revision REV]
 """
+import argparse
 import json, sys
 from pathlib import Path
 import math
@@ -36,6 +39,14 @@ def conf_entropy(p, k):
 
 sess16 = ort.InferenceSession(str(ROOT / "models" / "laya-split-fp16.onnx"), providers=["CPUExecutionProvider"])
 sess32 = ort.InferenceSession(str(ROOT / "models" / "laya-split-single.onnx"), providers=["CPUExecutionProvider"])
+
+ap = argparse.ArgumentParser()
+ap.add_argument("--revision", default="c5d78730f3493e4fe16d61507ef4b78eef7318cf")
+args, _ = ap.parse_known_args()
+import os
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
+from huggingface_hub import snapshot_download
+snap = snapshot_download("convaiinnovations/laya", revision=args.revision, local_files_only=True)
 rep = {"model": "laya-split-fp16.onnx", "fixtures": []}
 for name in ["orig-3q", "choice-3", "choice-2", "choice-6", "mixed-batch"]:
     d = np.load(ROOT / "export" / "fixtures" / f"{name}.npz")
@@ -51,8 +62,7 @@ for name in ["orig-3q", "choice-3", "choice-2", "choice-6", "mixed-batch"]:
     da = float((np.abs(act16 - ta) / np.maximum(1, np.abs(ta))).max())
     # calibrated drift vs torch (temperature from checkpoint config)
     import json as js
-    snap = "/Users/matteolemni/.cache/huggingface/hub/models--convaiinnovations--laya/snapshots/c5d78730f3493e4fe16d61507ef4b78eef7318cf"
-    cfg = js.load(open(f"{snap}/rl_agent_config.json"))
+    cfg = js.load(open(Path(snap) / "rl_agent_config.json"))
     fx = [f for f in js.load(open(ROOT / "export" / "parity-report.json"))["fixtures"] if f["name"] == name][0]
     from laya.common import QTYPES, temp_bucket
     qtypes = fx["qtypes"]

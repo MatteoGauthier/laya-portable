@@ -2,13 +2,45 @@
   "name": "laya-js-check",
   "private": true,
   "type": "module",
-  "dependencies": {
-    "@huggingface/transformers": "^4.3.0",
-    "onnxruntime-node": "^1.20.0",
-    "onnxruntime-web": "^1.30.0"
+  "exports": {
+    "./laya": "./laya.mjs",
+    "./preprocess": "./laya-preprocess.mjs",
+    "./postprocess": "./laya-postprocess.mjs",
+    "./action": "./laya-action.mjs",
+    "./bpe": "./laya-bpe.mjs",
+    "./feed": "./laya-feed.mjs",
+    "./errors": "./laya-errors.mjs"
   },
-  "allowScripts": {
-    "onnxruntime-node@1.30.0": true
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "check:bpe": "node check-bpe.mjs",
+    "check:bpe-fuzz": "node check-bpe-fuzz.mjs",
+    "check:tokenizer": "node check-tokenizer.mjs",
+    "check:split": "node check-split.mjs",
+    "check:node": "node run-node.mjs",
+    "check:versions": "node check-versions.mjs",
+    "check": "npm run check:bpe && npm run check:bpe-fuzz && npm run check:split",
+    "lint": "eslint .",
+    "format:check": "oxfmt --check .",
+    "format": "oxfmt --write .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "onnxruntime-node": "1.30.0"
+  },
+  "devDependencies": {
+    "@huggingface/transformers": "4.3.0",
+    "eslint": "^9.28.0",
+    "onnxruntime-web": "1.30.0",
+    "oxfmt": "^0.68.0",
+    "typescript": "^5.9.0"
+  },
+  "overrides": {
+    "onnxruntime-web": "1.30.0",
+    "onnxruntime-common": "1.30.0"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "bin": {
     "laya": "./cli.mjs"

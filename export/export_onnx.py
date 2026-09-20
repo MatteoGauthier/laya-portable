@@ -100,7 +100,7 @@ def main():
     meta = {
         "model_id": "convaiinnovations/laya",
         "model_revision": REVISION if not args.model else None,
-        "model_path": str(model_path),
+        "model_path": str(Path(model_path).name) if not args.model else str(model_path),
         "source_commit": subprocess.check_output(["git", "-C", str(ROOT/"upstream"/"laya"), "rev-parse", "HEAD"], text=True).strip(),
         "versions": {n: importlib.metadata.version(n) for n in ["torch", "transformers", "onnx", "onnxscript", "numpy"]},
         "opset": args.opset,

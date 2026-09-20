@@ -86,13 +86,13 @@ def main():
     for device in args.devices:
         if device == "mps" and not torch.backends.mps.is_available():
             raise RuntimeError("MPS unavailable; refusing to report a CPU fallback as GPU performance")
-        start = time.perf_counter()
-        agent = laya.load(model_path, device=device)
-        synchronize(device)
-        load_seconds = time.perf_counter() - start
-        if str(agent.device) != device:
-            raise RuntimeError(f"Requested {device}; got {agent.device}")
         for count in [1, 3]:
+            start = time.perf_counter()
+            agent = laya.load(model_path, device=device)
+            synchronize(device)
+            load_seconds = time.perf_counter() - start
+            if str(agent.device) != device:
+                raise RuntimeError(f"Requested {device}; got {agent.device}")
             questions = dict(list(QUESTIONS.items())[:count])
             items = []
             for definition in questions.values():
@@ -118,10 +118,10 @@ def main():
                   f"end-to-end {total['p50_ms']:.1f} ms", flush=True)
             args.output.parent.mkdir(parents=True, exist_ok=True)
             args.output.write_text(json.dumps(report, indent=2) + "\n")
-        del agent, inputs, batch
-        gc.collect()
-        if device == "mps":
-            torch.mps.empty_cache()
+            del agent, inputs, batch
+            gc.collect()
+            if device == "mps":
+                torch.mps.empty_cache()
 
 
 if __name__ == "__main__":

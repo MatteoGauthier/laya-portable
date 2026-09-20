@@ -1,0 +1,5 @@
+{
+  "js/**/*.mjs": ["oxfmt --check", "eslint"],
+  "playground/src/**/*.{js,jsx}": ["oxfmt --check", "oxlint"],
+  "export/*.py": ["ruff check", "black --check"]
+}

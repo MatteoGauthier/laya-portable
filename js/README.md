@@ -3,11 +3,19 @@
 Reuses `export/fixtures/*.npz` via `js/fixtures/*.json` (emitted by
 `export/emit_js_fixtures.py`).
 
-## Node.js (onnxruntime-node 1.30.0)
-
 ```sh
-cd js && npm install && node run-node.mjs && node check-tokenizer.mjs && node check-split.mjs && node check-bpe.mjs && node check-bpe-fuzz.mjs
+cd js && npm install && npm test && npm run check
+# ORT model checks (need models/, gitignored): npm run check:split && npm run check:node
+# lint/format/types: npm run lint && npm run format:check && npm run typecheck
+# CLI: node cli.mjs --help
 ```
+
+Shared modules: `laya-feed.mjs` (ORT feed builder, single copy),
+`laya-errors.mjs` (typed errors), `laya-act-bin.mjs` (1.1MB binary head —
+`export/emit_act_bin.py`; falls back to `act_head.json`). Default model is
+`models/laya-split-single.onnx` everywhere (`DEFAULT_MODEL` in `laya.mjs`).
+
+## Node.js (onnxruntime-node 1.30.0)
 
 - `run-node.mjs`: PASS all 5, identical diffs to Python ORT (logits ≤7.7e-06).
 - `check-tokenizer.mjs`: PASS all 5, transformers.js token IDs match Python exactly.
@@ -27,18 +35,18 @@ Tiny probes: `add`, `topk`, `isnan`, `and`, `max` all PASS on `wasm` and
 Full model (`choice-2`, B=1 S=50, single-file required — external-data fails
 with `MountedFiles`):
 
-| Backend | Run | max\|logit\| | Note |
-|---|---:|---:|---|
-| wasm | 756ms | 2.38e-06 PASS | baseline |
-| webgpu (default) | FAIL | — | `SkipLayerNormalization: Beta must be 1D` (encoder fusion bug) |
-| webgpu-basic | 1072ms | 3.81e-06 PASS | avoids fusion, slower than wasm |
+| Backend          |    Run |  max\|logit\| | Note                                                           |
+| ---------------- | -----: | ------------: | -------------------------------------------------------------- |
+| wasm             |  756ms | 2.38e-06 PASS | baseline                                                       |
+| webgpu (default) |   FAIL |             — | `SkipLayerNormalization: Beta must be 1D` (encoder fusion bug) |
+| webgpu-basic     | 1072ms | 3.81e-06 PASS | avoids fusion, slower than wasm                                |
 
 Split model (`laya-split-single.onnx`, logits+pooled, JS action head):
 
-| Backend | Run | max\|logit\| | Note |
-|---|---:|---:|---|
-| webgpu-default | FAIL | — | same encoder fusion bug (split doesn't fix it) |
-| webgpu-basic | 306ms | 3.81e-06 PASS | 3.5× faster than full, 2.5× faster than wasm |
+| Backend        |   Run |  max\|logit\| | Note                                           |
+| -------------- | ----: | ------------: | ---------------------------------------------- |
+| webgpu-default |  FAIL |             — | same encoder fusion bug (split doesn't fix it) |
+| webgpu-basic   | 306ms | 3.81e-06 PASS | 3.5× faster than full, 2.5× faster than wasm   |
 
 WebGPU is hardware Metal yet full-graph is slower than WASM; split flips the
 ranking. Still ~14× slower than native Torch MPS (21.8ms).

@@ -59,9 +59,19 @@ uv pip install --python .venv/bin/python -r requirements-benchmark.txt
 git clone https://github.com/NandhaKishorM/laya upstream/laya && git -C upstream/laya checkout 6a5819129eb220570792e417e49723d697efd76f
 hf download convaiinnovations/laya --revision c5d78730f3493e4fe16d61507ef4b78eef7318cf --include 'model.safetensors' 'rl_agent_config.json' 'encoder/*' 'tokenizer/*'
 .venv/bin/python benchmark.py            # Mac CPU/MPS baseline
-.venv/bin/python export/check_parity.py  # ONNX parity fixtures
+.venv/bin/python export/check_parity.py  # ONNX parity fixtures (exits 1 on drift)
 .venv/bin/python export/check_accuracy.py
 ```
+
+```sh
+pip install pytest && python -m pytest tests/ -q  # offline report assertions (no models)
+cd js && npm install && npm test && npm run check # JS unit + BPE/fuzz checks
+cd playground && npm install && npm test          # UI tests
+```
+
+CI (`.github/workflows/ci.yml`): JS tests + report assertions on every push;
+heavy export rebuild only on `[export]` commits. `pyproject.toml` is the
+packaging source of truth; `Dockerfile` gives a CPU-only repro container.
 
 ## License
 

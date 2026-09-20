@@ -1,0 +1,53 @@
+name: ci
+on:
+  push:
+  pull_request:
+
+jobs:
+  js:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: js
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: js/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npm run check:versions
+      - run: npm test
+      - run: npm run check:bpe
+      - run: npm run check:bpe-fuzz
+      # ORT checks need models/ (gitignored, 1.6GB) — run only when present
+      - run: |
+          if [ -f ../models/laya-split-single.onnx ]; then npm run check:split; else echo "skip check:split (no models)"; fi
+          if [ -f ../models/laya-faithful.onnx ]; then npm run check:node; else echo "skip check:node (no models)"; fi
+      - run: npx tsc --noEmit
+      - run: npx eslint .
+      - run: npx oxfmt --check .
+
+  python-reports:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: pip install pytest
+      - run: python -m pytest tests/ -q
+
+  python-export:
+    # Heavy: needs pinned checkpoint + 1.6GB rebuild. Manual only.
+    if: contains(github.event.head_commit.message, '[export]')
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv venv .venv --python 3.13
+      - run: uv pip install --python .venv/bin/python -r requirements-benchmark.txt
+      - run: git clone https://github.com/NandhaKishorM/laya upstream/laya && git -C upstream/laya checkout 6a5819129eb220570792e417e49723d697efd76f
+      - run: .venv/bin/python export/check_parity.py
+      - run: .venv/bin/python -m pytest tests/ -q

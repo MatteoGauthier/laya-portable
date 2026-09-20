@@ -70,19 +70,25 @@ def postprocess(agent, logits_np, act_np, items, ids, questions):
     return out, act_probs
 
 def main():
+    import argparse
     import torch
     import laya
     from huggingface_hub import snapshot_download
     from laya.common import QTYPES, build_sequence, collate_items
     import onnxruntime as ort
 
-    model_path = snapshot_download("convaiinnovations/laya", revision=REVISION, local_files_only=True)
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--model", default=None, help="Local checkpoint dir (default: pinned HF cache)")
+    ap.add_argument("--onnx", type=Path, default=ROOT / "models" / "laya-faithful.onnx")
+    args = ap.parse_args()
+
+    model_path = args.model or snapshot_download("convaiinnovations/laya", revision=REVISION, local_files_only=True)
     print(f"loading torch {model_path} ...", flush=True)
     agent = laya.load(model_path, device="cpu")
     assert str(agent.device) == "cpu"
     agent.model.eval()
 
-    onnx_path = ROOT/"models"/"laya-faithful.onnx"
+    onnx_path = args.onnx
     print(f"loading onnx {onnx_path} ...", flush=True)
     sess = ort.InferenceSession(str(onnx_path), providers=["CPUExecutionProvider"])
     print(f"ort {ort.__version__} inputs {[i.name for i in sess.get_inputs()]}", flush=True)
@@ -90,7 +96,7 @@ def main():
     report = {
         "model_revision": REVISION,
         "source_commit": subprocess.check_output(["git", "-C", str(ROOT/"upstream"/"laya"), "rev-parse", "HEAD"], text=True).strip(),
-        "onnx": str(onnx_path),
+        "onnx": str(onnx_path.relative_to(ROOT)) if onnx_path.is_absolute() and str(onnx_path).startswith(str(ROOT)) else str(onnx_path),
         "ort_version": ort.__version__,
         "torch_version": torch.__version__,
         "fixtures": [],
@@ -190,6 +196,8 @@ def main():
     out = ROOT/"export"/"parity-report.json"
     out.write_text(json.dumps(report, indent=2) + "\n")
     print(f"wrote {out} overall={'PASS' if all_ok else 'CHECK DETAILS'}", flush=True)
+    if not all_ok:
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

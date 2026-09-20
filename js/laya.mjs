@@ -2,33 +2,110 @@
 // import { LayaClient } from './laya.mjs';
 // const laya = await LayaClient.open(); console.log(await laya.predict(state, questions));
 import * as ort from 'onnxruntime-node';
-import { readFileSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { readFileSync, existsSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { loadBpeTokenizer } from './laya-bpe.mjs';
 import { toInternal, buildSequence, collateItems, QTYPES } from './laya-preprocess.mjs';
 import { predictFromLogits } from './laya-postprocess.mjs';
 import { actionLogits } from './laya-action.mjs';
+import { buildFeeds, splitOutputs } from './laya-feed.mjs';
+import { LayaConfigError, LayaEncodeError } from './laya-errors.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
+/** Canonical default model (single-file split FP32). CLI/worker/checks must match. */
+export const DEFAULT_MODEL = join(here, '..', 'models', 'laya-split-single.onnx');
+export const DEFAULT_TOKENIZER = join(here, 'tokenizer', 'tokenizer.json');
+export const DEFAULT_CONFIG = join(here, 'tokenizer', 'rl_agent_config.json');
+export const DEFAULT_ACT_HEAD = join(here, 'act_head.json');
+
+function readJson(path, label) {
+  try {
+    return JSON.parse(readFileSync(path, 'utf8'));
+  } catch (err) {
+    throw new LayaConfigError(`cannot read ${label}: ${path}`, { cause: err });
+  }
+}
+
 export class LayaClient {
+  tok;
+  sess;
+  actW;
+  temp;
+  maxLen;
+  headMaxLen;
+  modelPath;
+  /**
+   * @param {{model?,tokenizer?,config?,actHead?,providers?}} opts
+   */
   static async open(opts = {}) {
-    const tokenizerJson = JSON.parse(readFileSync(opts.tokenizer ?? join(here, 'tokenizer', 'tokenizer.json'), 'utf8'));
-    const cfg = JSON.parse(readFileSync(opts.config ?? join(here, 'tokenizer', 'rl_agent_config.json'), 'utf8'));
+    const modelPath = opts.model ?? DEFAULT_MODEL;
+    const [tokenizerJson, cfg] = await Promise.all([
+      (async () => readJson(opts.tokenizer ?? DEFAULT_TOKENIZER, 'tokenizer'))(),
+      (async () => readJson(opts.config ?? DEFAULT_CONFIG, 'config'))(),
+    ]);
     const c = new LayaClient();
-    c.tok = loadBpeTokenizer(tokenizerJson);
-    c.sess = await ort.InferenceSession.create(
-      opts.model ?? join(here, '..', 'models', 'laya-split-single.onnx'),
-      { executionProviders: opts.providers ?? ['cpu'] });
-    c.actW = JSON.parse(readFileSync(opts.actHead ?? join(here, 'act_head.json'), 'utf8'));
+    try {
+      c.tok = loadBpeTokenizer(tokenizerJson);
+    } catch (err) {
+      throw new LayaConfigError('invalid tokenizer.json', { cause: err });
+    }
+    try {
+      c.sess = await ort.InferenceSession.create(modelPath, {
+        executionProviders: opts.providers ?? ['cpu'],
+      });
+    } catch (err) {
+      throw new LayaConfigError(`cannot load model: ${modelPath}`, { cause: err });
+    }
+    // act_head: prefer binary fast path (1.1MB f32) over JSON (5.2MB text).
+    const actHeadOpt = opts.actHead;
+    if (!actHeadOpt) {
+      const bin = join(here, 'act_head.bin');
+      const meta = join(here, 'act_head.meta.json');
+      if (existsSync(bin) && existsSync(meta)) {
+        try {
+          const { loadActBin } = await import('./laya-act-bin.mjs');
+          c.actW = loadActBin(bin, meta);
+        } catch (err) {
+          throw new LayaConfigError('invalid act_head.bin', { cause: err });
+        }
+      } else {
+        c.actW = readJson(DEFAULT_ACT_HEAD, 'act_head');
+      }
+    } else {
+      c.actW = readJson(actHeadOpt, 'act_head');
+    }
     c.temp = { temperature: cfg.temperature, temperature_by_options: cfg.temperature_by_options };
+    if (!c.temp.temperature || !c.temp.temperature_by_options) {
+      throw new LayaConfigError('config missing temperature tables');
+    }
     c.maxLen = cfg.max_len ?? 512;
     c.headMaxLen = cfg.head_max_len ?? 192;
+    c.modelPath = modelPath;
     return c;
   }
 
+  /** Release the ORT session. */
+  async close() {
+    try {
+      await this.sess?.release?.();
+    } finally {
+      this.sess = null;
+    }
+  }
+
+  /**
+   * @param {object|string} state
+   * @param {Record<string, {type:string,instructions:string,criteria?:any}>} questions
+   */
   async predict(state, questions) {
+    if (!questions || !Object.keys(questions).length) {
+      throw new LayaEncodeError('predict: at least one question required');
+    }
+    if (Object.keys(questions).length > 32) {
+      throw new RangeError(`predict: too many questions (${Object.keys(questions).length} > 32)`);
+    }
     const t0 = performance.now();
     const ids = Object.keys(questions);
     const items = ids.map((qid) => {
@@ -37,19 +114,10 @@ export class LayaClient {
       return { ids: seq, markers, qtype: QTYPES[q.t] };
     });
     const b = collateItems([items], this.tok.padId);
-    const B = b.inputIds.length, S = b.inputIds[0].length, K = b.markerPos[0].length;
-    const toI64 = (n) => BigInt64Array.from(n.flat(Infinity).map((v) => BigInt(v)));
-    const toB8 = (n) => Uint8Array.from(n.flat(Infinity).map((v) => (v ? 1 : 0)));
-    const out = await this.sess.run({
-      input_ids: new ort.Tensor('int64', toI64(b.inputIds), [B, S]),
-      attention_mask: new ort.Tensor('int64', toI64(b.attentionMask), [B, S]),
-      marker_pos: new ort.Tensor('int64', toI64(b.markerPos), [B, K]),
-      marker_mask: new ort.Tensor('bool', toB8(b.markerMask), [B, K]),
-      qtype: new ort.Tensor('int64', toI64([b.qtype]), [B]),
-    });
-    const logits = [], pooled = [];
-    const ld = Array.from(out.logits.data), pd = Array.from(out.pooled.data);
-    for (let i = 0; i < B; i++) { logits.push(ld.slice(i * K, (i + 1) * K)); pooled.push(pd.slice(i * 1024, (i + 1) * 1024)); }
+    const B = b.inputIds.length;
+    const K = b.markerPos[0].length;
+    const out = await this.sess.run(buildFeeds(ort, b));
+    const { logits, pooled } = splitOutputs(out.logits.data, out.pooled.data, B, K);
     const act = actionLogits(logits, b.markerMask, pooled, this.actW);
     const nTokens = b.attentionMask.flat().reduce((a, v) => a + v, 0);
     const result = predictFromLogits(questions, items, logits, act, this.temp, nTokens);

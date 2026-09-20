@@ -5,13 +5,25 @@ js/fixtures/*.json with inputs as nested lists, expected raw outputs,
 temperature config, and expected calibrated answers.
 """
 import json
+import os
 from pathlib import Path
 import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 
+REVISION = "c5d78730f3493e4fe16d61507ef4b78eef7318cf"
+
+def resolve_snap(revision=REVISION):
+    os.environ.setdefault("HF_HUB_OFFLINE", "1")
+    from huggingface_hub import snapshot_download
+    return Path(snapshot_download("convaiinnovations/laya", revision=revision, local_files_only=True))
+
 def main():
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--revision", default=REVISION)
+    args = ap.parse_args()
     parity = json.loads((ROOT/"export"/"parity-report.json").read_text())
-    snap = "/Users/matteolemni/.cache/huggingface/hub/models--convaiinnovations--laya/snapshots/c5d78730f3493e4fe16d61507ef4b78eef7318cf"
+    snap = resolve_snap(args.revision)
     cfg = json.loads((Path(snap)/"rl_agent_config.json").read_text())
     temp = {"temperature": cfg["temperature"], "temperature_by_options": cfg["temperature_by_options"]}
     outdir = ROOT/"js"/"fixtures"

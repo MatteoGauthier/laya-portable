@@ -178,6 +178,11 @@ def main():
         report["adapters"].append({"name": ad.name, "score": score, "rows": rows})
     args.output.write_text(json.dumps(report, indent=2) + "\n")
     print(f"wrote {args.output}")
+    # Gate: torch baseline must be perfect; quantized variants are informational
+    # (documented as rejected in RELEASE_NOTES) so they don't fail CI.
+    torch_score = next(a["score"] for a in report["adapters"] if a["name"] == "torch-fp32")
+    if torch_score != len(CASES):
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,45 @@
+[project]
+name = "laya-test"
+version = "0.1.0"
+description = "Portable Laya decisions: FP32 ONNX + dependency-free JS runtime + browser worker"
+requires-python = "==3.13.7"
+dependencies = [
+  "huggingface-hub==1.32.0",
+  "laya==0.3.3",
+  "numpy==2.5.3",
+  "onnx==1.23.0",
+  "onnxconverter-common==1.16.0",
+  "onnxruntime==1.30.0",
+  "torch==2.14.0",
+  "transformers==5.17.0",
+  "tokenizers==0.23.2",
+  "safetensors==0.8.0",
+  "onnxscript==0.7.2",
+  "protobuf==7.36.2",
+  "tqdm==4.70.1",
+]
+
+[project.optional-dependencies]
+benchmark = [
+  "rich==15.0.0",
+  "typer==0.27.2",
+]
+export = [
+  "coremltools==9.0",
+  "onnx-ir==1.0.0",
+]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 120
+
+[tool.black]
+line-length = 120
+target-version = ["py313"]
+
+[tool.mypy]
+python_version = "3.13"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

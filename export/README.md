@@ -16,7 +16,15 @@ Not an Android release yet.
 .venv/bin/python export/check_accuracy.py     # -> export/accuracy-report.json (13 weak checks)
 .venv/bin/python export/to_int8.py            # -> models/laya-split-int8.onnx (405 MB, rejected as-is)
 .venv/bin/python export/to_4bit.py            # -> models/laya-split-4bit.onnx (395 MB, WebGPU-broken)
+.venv/bin/python export/emit_act_bin.py        # -> js/act_head.bin (1.1MB f32, fast head load)
+.venv/bin/python export/emit_js_fixtures.py    # -> js/fixtures/*.json (needs parity-report)
+.venv/bin/python export/emit_bpe_fuzz.py       # -> js/bpe-fuzz.json
 ```
+
+All converters take `--src/--dst` (`export_onnx.py` also `--opset`,
+`to_4bit.py` also `--bits/--block-size`); `check_parity.py` takes
+`--model/--onnx` and exits 1 on drift (CI-gatable). Checkpoint resolution uses
+`snapshot_download(..., local_files_only=True)` — no hardcoded cache paths.
 
 Offline; reuses pinned checkpoint `c5d78730f3493e4fe16d61507ef4b78eef7318cf` and
 source `6a5819129eb220570792e417e49723d697efd76f`. See `export/requirements.txt`.

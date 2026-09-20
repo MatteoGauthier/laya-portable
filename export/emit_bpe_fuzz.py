@@ -1,4 +1,8 @@
-"""Emit fuzz strings + Python token IDs for pure-JS BPE validation."""
+"""Emit fuzz strings + Python token IDs for pure-JS BPE validation.
+
+Usage: .venv/bin/python export/emit_bpe_fuzz.py [--revision REV]
+"""
+import argparse
 import json, random
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
@@ -8,7 +12,11 @@ import os
 os.environ.setdefault("USE_TF", "0")
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 from transformers import AutoTokenizer
-SNAP = "/Users/matteolemni/.cache/huggingface/hub/models--convaiinnovations--laya/snapshots/c5d78730f3493e4fe16d61507ef4b78eef7318cf"
+from huggingface_hub import snapshot_download
+REVISION = "c5d78730f3493e4fe16d61507ef4b78eef7318cf"
+ap = argparse.ArgumentParser()
+ap.add_argument("--revision", default=REVISION)
+SNAP = snapshot_download("convaiinnovations/laya", revision=ap.parse_known_args()[0].revision, local_files_only=True)
 tok = AutoTokenizer.from_pretrained(f"{SNAP}/tokenizer")
 
 random.seed(42)
