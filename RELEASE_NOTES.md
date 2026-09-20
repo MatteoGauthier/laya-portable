@@ -38,6 +38,8 @@ and `js/act_head.json` (split head weights), parity/accuracy fixtures.
 - Torch MPS 1q/3q forward p50: 21.8 / 40.0 ms (`packages/test-vectors/reports/mac-baseline.json`).
 - ONNX CPU 1q/3q: 34.8 / 93.9 ms. Browser split WebGPU-basic 1q: 306 ms.
 - Accuracy harness: 13/13 torch, FP32, FP16, 4-bit-CPU; 12/13 INT8.
+- Public sets: AG News 0.935 / Emotion 0.52 / banking77 0.435, ours == torch
+  (community excluded, fixed K=2; see `public-benchmark.json`).
 
 ## Known limits
 

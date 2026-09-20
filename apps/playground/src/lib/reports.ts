@@ -49,6 +49,25 @@ export interface AccuracyReport {
   adapters: AccuracyAdapter[];
 }
 
+export interface PublicSuiteAdapter {
+  accuracy: number;
+  ece: number;
+  brier: number;
+  p50_ms: number;
+}
+
+export interface PublicSuite {
+  n: number;
+  labels?: string[];
+  n_classes?: number;
+  adapters: Record<string, PublicSuiteAdapter>;
+}
+
+export interface PublicBenchmarkReport {
+  suites: Record<string, PublicSuite>;
+  community: string;
+}
+
 export interface JsFixture {
   batch: number;
   seq_len: number;

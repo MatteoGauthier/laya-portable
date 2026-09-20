@@ -125,6 +125,30 @@ Net Phase 3: ship FP16 for CPU/WASM (documented 1e-03 drift), FP32 split for
 WebGPU. Naive INT8 and 4-bit/WebGPU are out; selective/static quantization
 with calibration data is the deeper follow-up, gated by this harness.
 
+## Public datasets (`bench_public.py` → `public-benchmark.json`)
+
+Labelled accuracy on public HF datasets (needs network for data only;
+weights stay cached). Community ONNX is interface-excluded everywhere
+below — every suite needs K≥4, its graph is fixed K=2:
+
+| Suite (n) | torch | ours fp32 | ours fp16 | Upstream published | Note |
+|---|---:|---:|---:|---:|---|
+| AG News 4-way (200) | 0.935 | 0.935 | 0.935 | 0.950–0.953 | bare-key prompts vs tuned; credible |
+| Emotion 6-way (150) | 0.520 | 0.520 | 0.527 | 0.595–0.600 | below published; prompt-sensitive, small n |
+| banking77 77-way (154) | 0.435 | 0.435 | 0.429 | 0.425 | reproduces the option-budget ceiling |
+
+FP32 matches torch aggregate accuracy in these subsets; this does not prove
+per-example equality. FP16 gains one emotion hit and loses one banking hit.
+Corrected per-example ECE: AG News 0.028, Emotion 0.378, banking77 0.543
+(torch). The initial ECE implementation incorrectly reordered hit flags.
+Per-question p50: AG News torch 107ms / ours 66ms; Emotion 84/40ms;
+banking77 270/235ms. These include preprocessing, have no dedicated warmup,
+and are exploratory timings, not controlled speedup measurements.
+FP16 was slower on this CPU setup; the kernel-level cause is unverified.
+Samples are the first N examples per class, shuffled afterward, not random
+draws. Published scores use different samples/prompts and are context only;
+these results establish neither an architectural ceiling nor a Jev ranking.
+
 ## CoreML spike (Phase 4, blocked on toolchain)
 
 `to_coreml.py` attempts split→CoreML via TorchScript trace and via

@@ -1,10 +1,11 @@
 import React from 'react';
 import type { ReactNode } from 'react';
-import type { AccuracyReport, BaselineReport, Fp16Report, ParityReport } from '../lib/reports.ts';
+import type { AccuracyReport, BaselineReport, Fp16Report, ParityReport, PublicBenchmarkReport } from '../lib/reports.ts';
 import parityData from '@laya/test-vectors/reports/parity-report.json';
 import baselineData from '@laya/test-vectors/reports/mac-baseline.json';
 import fp16Data from '@laya/test-vectors/reports/fp16-parity.json';
 import accData from '@laya/test-vectors/reports/accuracy-report.json';
+import pubData from '@laya/test-vectors/reports/public-benchmark.json';
 
 // Tables render from JSON reports; phase board stays a curated snapshot
 // (it summarizes process state, not a single report file).
@@ -53,6 +54,7 @@ export function ProgressTab(): React.JSX.Element {
   const baseline = baselineData as unknown as BaselineReport;
   const fp16 = fp16Data as unknown as Fp16Report;
   const acc = accData as unknown as AccuracyReport;
+  const pub = pubData as unknown as PublicBenchmarkReport;
   return (
     <div>
       <h3>Phase board</h3>
@@ -142,6 +144,27 @@ export function ProgressTab(): React.JSX.Element {
                   .filter((r) => !r.pass)
                   .map((r) => r.id)
                   .join(', ') || '—'}
+              </td>
+            </tr>
+          ))
+        }
+      />
+      <ReportTable
+        title="Public datasets (labelled, CPU) — community excluded (fixed K=2)"
+        data={pub}
+        error={null}
+        columns={['suite', 'n', 'torch', 'ours fp32', 'ours fp16', 'p50 torch/ours']}
+        rows={(d) =>
+          Object.entries(d.suites).map(([sname, s]) => (
+            <tr key={sname}>
+              <td>{sname}</td>
+              <td>{s.n}</td>
+              <td>{s.adapters['torch-fp32']?.accuracy.toFixed(3) ?? '—'}</td>
+              <td>{s.adapters['onnx-laya-split-single']?.accuracy.toFixed(3) ?? '—'}</td>
+              <td>{s.adapters['onnx-laya-split-fp16']?.accuracy.toFixed(3) ?? '—'}</td>
+              <td>
+                {s.adapters['torch-fp32']?.p50_ms.toFixed(0) ?? '—'}/
+                {s.adapters['onnx-laya-split-single']?.p50_ms.toFixed(0) ?? '—'}ms
               </td>
             </tr>
           ))

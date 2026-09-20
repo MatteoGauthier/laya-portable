@@ -65,7 +65,7 @@ hf download convaiinnovations/laya --revision c5d78730f3493e4fe16d61507ef4b78eef
 ```
 
 ```sh
-pip install pytest && python -m pytest tests/ -q  # offline report assertions (no models)
+uv pip install pytest && python -m pytest tests/ -q  # offline report assertions (no models)
 cd packages/laya-js && npm install && npm test && npm run check # JS unit + BPE/fuzz checks
 cd apps/playground && npm install && npm test          # UI tests
 ```
