@@ -42,7 +42,13 @@ def main():
     ex = (torch.randint(0, 50000, (1, 64), dtype=torch.int64), torch.ones((1, 64), dtype=torch.int64),
           torch.tensor([[5, 10, 15]]), torch.tensor([[True, True, True]]), torch.tensor([0]))
     print("exporting via torch.export (strict=False)...", flush=True)
-    ep = torch.export.export(wrap, ex, strict=False).run_decompositions({})
+    # NOTE: run_decompositions({}) preserves aten.new_ones, which coremltools 9
+    # cannot convert ("Unsupported fx node new_ones"). The default table already
+    # contains a new_ones decomposition, so plain run_decompositions() gets past
+    # that gate. Next frontier (2026-09-20): dynamic batch specializes to 1
+    # inside HF ModernBERT internals (Dim.AUTO keeps seq dynamic), and MIL then
+    # rejects gather_along_axis with fp32 indices from the decomposed mask path.
+    ep = torch.export.export(wrap, ex, strict=False).run_decompositions()
     print("converting (flexible shapes)...", flush=True)
     mlmodel = ct.convert(
         ep, inputs=[

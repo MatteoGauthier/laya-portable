@@ -118,8 +118,10 @@ guardrails, moderation, triage, original anchors) per variant with margins:
 
 Browser 4-bit (`choice-2`): WASM 1088ms, 4.48e-02; WebGPU-basic 219ms warm but
 3.35e+00 deterministic — numerically broken (dequant + FP16 accumulation or
-kernel gap). Rejected for WebGPU pending quant-config investigation
-(asymmetric, block size, node exclusions) or ORT updates.
+kernel gap). Sweep (block-64 symmetric, block-32 asymmetric): CPU holds 13/13
+both configs, but WebGPU gives 4.34e+00 (sym64, 277ms) and a MatMulNBits
+launch failure (asym32, "cannot convert shape") — a kernel gap, not a config
+issue. Rejected for WebGPU pending ORT updates.
 
 Net Phase 3: ship FP16 for CPU/WASM (documented 1e-03 drift), FP32 split for
 WebGPU. Naive INT8 and 4-bit/WebGPU are out; selective/static quantization
@@ -134,7 +136,7 @@ below — every suite needs K≥4, its graph is fixed K=2:
 | Suite (n) | torch | ours fp32 | ours fp16 | Upstream published | Note |
 |---|---:|---:|---:|---:|---|
 | AG News 4-way (200) | 0.935 | 0.935 | 0.935 | 0.950–0.953 | bare-key prompts vs tuned; credible |
-| Emotion 6-way (150) | 0.520 | 0.520 | 0.527 | 0.595–0.600 | below published; prompt-sensitive, small n |
+| Emotion 6-way (150) | 0.520 | 0.520 | 0.527 | 0.595–0.600 | gap tested: option descriptions, instruction reword, raw-vs-JSON state — none move it (0.49–0.53); upstream behavior, not a port defect |
 | banking77 77-way (154) | 0.435 | 0.435 | 0.429 | 0.425 | reproduces the option-budget ceiling |
 
 Ours matches torch everywhere (FP16: one extra emotion hit from drift noise).
@@ -145,13 +147,16 @@ slower on CPU (no FP16 kernels) — its win is download size, not CPU speed.
 
 ## CoreML spike (Phase 4, blocked on toolchain)
 
-`to_coreml.py` attempts split→CoreML via TorchScript trace and via
+`to_coreml.py` attempts split→CoreML via
 `torch.export` + decompositions (coremltools 9.0, torch 2.14 untested).
 TorchScript fails on a float64/int64 dtype conflict inside HF ModernBERT
-mask handling; `torch.export` converts further but coremltools lacks the
-`new_ones` op. No `.mlpackage` produced. Follow-ups: torch 2.7 venv,
-custom decomposition for `new_ones`, or a newer coremltools. MPS (21.8ms/1q)
-remains the Apple GPU reference.
+mask handling. Frontier as of 2026-09-20: default decompositions (not `{}`)
+clear the `new_ones` gate; dynamic batch specializes to 1 in HF internals
+(`Dim.AUTO` keeps seq dynamic); MIL then rejects `gather_along_axis` with
+fp32 indices from the decomposed mask path. No `.mlpackage` yet. Remaining
+options: rewrite the marker-gather path with int-safe indexing, static
+batch-1/seq-512 bucket, or the MLX port. MPS (21.8ms/1q) remains the Apple
+GPU reference.
 
 ## Limits
 

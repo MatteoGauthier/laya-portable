@@ -53,11 +53,21 @@ def banking_labels():
     return sorted(seen)
 
 
-def run_suite(name, samples, criteria, instructions, adapters):
+EMOTION_DESCR = {
+    "sadness": "feeling down, sorrowful, unhappy",
+    "joy": "feeling happy, delighted, cheerful",
+    "love": "feeling affectionate, caring, tender",
+    "anger": "feeling mad, furious, irritated",
+    "fear": "feeling scared, anxious, afraid",
+    "surprise": "feeling astonished by something unexpected",
+}
+
+
+def run_suite(name, samples, criteria, instructions, adapters, raw_state=False):
     questions = {"q": {"type": "choice", "instructions": instructions, "criteria": criteria}}
     rows = {ad.name: {"n": 0, "correct": 0, "confs": [], "briers": [], "ms": []} for ad in adapters}
     for text, gold in samples:
-        state = {"text": text}
+        state = text if raw_state else {"text": text}
         for ad in adapters:
             t0 = time.perf_counter()
             ans = ad.predict(state, questions)["q"]
@@ -98,6 +108,10 @@ def main():
     ap.add_argument("--n-per-class", type=int, default=50)
     ap.add_argument("--banking-per-class", type=int, default=2)
     ap.add_argument("--models", nargs="*", default=["models/laya-split-single.onnx", "models/laya-split-fp16.onnx"])
+    ap.add_argument("--describe-emotion", action="store_true", help="Use one-line criteria descriptions for the emotion suite")
+    ap.add_argument("--emotion-only", action="store_true", help="Run only the emotion suite")
+    ap.add_argument("--emotion-instruction", default=None, help="Override the emotion suite instruction")
+    ap.add_argument("--raw-state", action="store_true", help="Pass state as a raw string instead of {\"text\": ...}")
     ap.add_argument("--output", type=Path, default=ROOT / "packages" / "test-vectors" / "reports" / "public-benchmark.json")
     args = ap.parse_args()
 
@@ -107,15 +121,20 @@ def main():
     report = {"suites": {}, "community": "interface-excluded (fixed K=2; all suites need K>=4)"}
     suites = [
         ("ag_news", "fancyzhx/ag_news", "test", ["World", "Sports", "Business", "Sci/Tech"],
-         "Which section does this news article belong to?", args.n_per_class),
+         "Which section does this news article belong to?", args.n_per_class, None),
         ("emotion", "dair-ai/emotion", "test", ["sadness", "joy", "love", "anger", "fear", "surprise"],
-         "Which emotion does this message express?", max(10, args.n_per_class // 2)),
+         args.emotion_instruction or "Which emotion does this message express?", max(10, args.n_per_class // 2),
+         EMOTION_DESCR if args.describe_emotion else None),
     ]
-    for sname, ds, split, labels, ins, npc in suites:
+    if args.emotion_only:
+        suites = [s for s in suites if s[0] == "emotion"]
+        report["suites"] = {}
+    for sname, ds, split, labels, ins, npc, descr in suites:
         print(f"sampling {sname} ({len(labels)} classes x {npc})...", flush=True)
         samples = sample_per_class(ds, split, "text", "label", labels, npc)
         print(f"  got {len(samples)}, running {len(adapters)} adapters...", flush=True)
-        rows = run_suite(sname, samples, {l: None for l in labels}, ins, adapters)
+        rows = run_suite(sname, samples, dict(descr) if descr else {l: None for l in labels}, ins, adapters,
+                         raw_state=args.raw_state)
         report["suites"][sname] = {"n": len(samples), "labels": labels, "adapters": {}}
         for aname, r in rows.items():
             hits = [1] * r["correct"] + [0] * (r["n"] - r["correct"])
@@ -125,6 +144,11 @@ def main():
                 "brier": round(float(np.mean(r["briers"])), 4),
                 "p50_ms": round(float(np.median(r["ms"])), 1)}
             print(f"  {aname}: acc={acc:.3f} ece={report['suites'][sname]['adapters'][aname]['ece']:.3f} p50={np.median(r['ms']):.0f}ms", flush=True)
+
+    if args.emotion_only:
+        args.output.write_text(json.dumps(report, indent=2) + "\n")
+        print(f"wrote {args.output}")
+        return
 
     print("resolving banking77 labels...", flush=True)
     blabels = banking_labels()
