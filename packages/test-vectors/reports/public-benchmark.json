@@ -11,21 +11,21 @@
       "adapters": {
         "torch-fp32": {
           "accuracy": 0.935,
-          "ece": 0.0275,
+          "ece": 0.0733,
           "brier": 0.0234,
-          "p50_ms": 107.2
+          "p50_ms": 112.7
         },
         "onnx-laya-split-single": {
           "accuracy": 0.935,
-          "ece": 0.0275,
+          "ece": 0.0733,
           "brier": 0.0234,
-          "p50_ms": 66.0
+          "p50_ms": 69.6
         },
         "onnx-laya-split-fp16": {
           "accuracy": 0.935,
-          "ece": 0.0274,
+          "ece": 0.0732,
           "brier": 0.0234,
-          "p50_ms": 170.4
+          "p50_ms": 169.7
         }
       }
     },
@@ -42,21 +42,21 @@
       "adapters": {
         "torch-fp32": {
           "accuracy": 0.52,
-          "ece": 0.3784,
+          "ece": 0.403,
           "brier": 0.1371,
-          "p50_ms": 83.8
+          "p50_ms": 83.3
         },
         "onnx-laya-split-single": {
           "accuracy": 0.52,
-          "ece": 0.3784,
+          "ece": 0.403,
           "brier": 0.1371,
-          "p50_ms": 40.4
+          "p50_ms": 46.1
         },
         "onnx-laya-split-fp16": {
           "accuracy": 0.5267,
-          "ece": 0.3799,
+          "ece": 0.3964,
           "brier": 0.1371,
-          "p50_ms": 108.9
+          "p50_ms": 120.1
         }
       }
     },
@@ -66,21 +66,21 @@
       "adapters": {
         "torch-fp32": {
           "accuracy": 0.4351,
-          "ece": 0.5432,
+          "ece": 0.5424,
           "brier": 0.0143,
-          "p50_ms": 269.9
+          "p50_ms": 290.1
         },
         "onnx-laya-split-single": {
           "accuracy": 0.4351,
-          "ece": 0.5432,
+          "ece": 0.5424,
           "brier": 0.0143,
-          "p50_ms": 234.8
+          "p50_ms": 248.7
         },
         "onnx-laya-split-fp16": {
           "accuracy": 0.4286,
           "ece": 0.5504,
           "brier": 0.0144,
-          "p50_ms": 514.3
+          "p50_ms": 530.7
         }
       }
     }

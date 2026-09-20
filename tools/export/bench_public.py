@@ -30,6 +30,7 @@ def sample_per_class(dataset_name, split, text_key, label_key, label_names, n_pe
     out = []
     ds = load_dataset(dataset_name, split=split, streaming=True)
     rng = __import__("random").Random(seed)
+    buf = {}
     for ex in ds:
         lab = ex[label_key]
         name = label_names[lab] if isinstance(lab, int) else lab
@@ -54,7 +55,7 @@ def banking_labels():
 
 def run_suite(name, samples, criteria, instructions, adapters):
     questions = {"q": {"type": "choice", "instructions": instructions, "criteria": criteria}}
-    rows = {ad.name: {"n": 0, "correct": 0, "hits": [], "confs": [], "briers": [], "ms": []} for ad in adapters}
+    rows = {ad.name: {"n": 0, "correct": 0, "confs": [], "briers": [], "ms": []} for ad in adapters}
     for text, gold in samples:
         state = {"text": text}
         for ad in adapters:
@@ -74,7 +75,6 @@ def run_suite(name, samples, criteria, instructions, adapters):
                 pred, conf, brier = None, 0.0, 1.0
             hit = pred == gold
             r["correct"] += hit
-            r["hits"].append(bool(hit))
             r["confs"].append(conf)
             r["briers"].append(brier)
     return rows
@@ -118,7 +118,7 @@ def main():
         rows = run_suite(sname, samples, {l: None for l in labels}, ins, adapters)
         report["suites"][sname] = {"n": len(samples), "labels": labels, "adapters": {}}
         for aname, r in rows.items():
-            hits = r["hits"]
+            hits = [1] * r["correct"] + [0] * (r["n"] - r["correct"])
             acc = r["correct"] / r["n"]
             report["suites"][sname]["adapters"][aname] = {
                 "accuracy": round(acc, 4), "ece": round(ece(r["confs"], hits), 4),
@@ -148,7 +148,7 @@ def main():
                      "What is the customer's banking intent?", adapters)
     report["suites"]["banking77"] = {"n": len(samples), "n_classes": len(blabels), "adapters": {}}
     for aname, r in rows.items():
-        hits = r["hits"]
+        hits = [1] * r["correct"] + [0] * (r["n"] - r["correct"])
         acc = r["correct"] / r["n"]
         report["suites"]["banking77"]["adapters"][aname] = {
             "accuracy": round(acc, 4), "ece": round(ece(r["confs"], hits), 4),

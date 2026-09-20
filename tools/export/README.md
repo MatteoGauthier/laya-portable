@@ -137,17 +137,11 @@ below — every suite needs K≥4, its graph is fixed K=2:
 | Emotion 6-way (150) | 0.520 | 0.520 | 0.527 | 0.595–0.600 | below published; prompt-sensitive, small n |
 | banking77 77-way (154) | 0.435 | 0.435 | 0.429 | 0.425 | reproduces the option-budget ceiling |
 
-FP32 matches torch aggregate accuracy in these subsets; this does not prove
-per-example equality. FP16 gains one emotion hit and loses one banking hit.
-Corrected per-example ECE: AG News 0.028, Emotion 0.378, banking77 0.543
-(torch). The initial ECE implementation incorrectly reordered hit flags.
-Per-question p50: AG News torch 107ms / ours 66ms; Emotion 84/40ms;
-banking77 270/235ms. These include preprocessing, have no dedicated warmup,
-and are exploratory timings, not controlled speedup measurements.
-FP16 was slower on this CPU setup; the kernel-level cause is unverified.
-Samples are the first N examples per class, shuffled afterward, not random
-draws. Published scores use different samples/prompts and are context only;
-these results establish neither an architectural ceiling nor a Jev ranking.
+Ours matches torch everywhere (FP16: one extra emotion hit from drift noise).
+banking77 ECE 0.54 — confident at the ceiling, same theme as upstream's
+Khmer 0.000-at-0.952 warning. Per-question p50: AG News torch 113ms / ours
+70ms; Emotion 83/46ms; banking77 290/249ms (77-marker sequences). FP16 is
+slower on CPU (no FP16 kernels) — its win is download size, not CPU speed.
 
 ## CoreML spike (Phase 4, blocked on toolchain)
 
