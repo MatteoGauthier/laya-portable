@@ -13,51 +13,34 @@
       {
         "name": "input_ids",
         "dtype": "INT64",
-        "shape": [
-          "batch_size",
-          "sequence_length"
-        ]
+        "shape": ["batch_size", "sequence_length"]
       },
       {
         "name": "attention_mask",
         "dtype": "INT64",
-        "shape": [
-          "batch_size",
-          "sequence_length"
-        ]
+        "shape": ["batch_size", "sequence_length"]
       },
       {
         "name": "marker_pos",
         "dtype": "INT64",
-        "shape": [
-          "batch_size",
-          2
-        ]
+        "shape": ["batch_size", 2]
       },
       {
         "name": "marker_mask",
         "dtype": "BOOL",
-        "shape": [
-          "batch_size",
-          2
-        ]
+        "shape": ["batch_size", 2]
       },
       {
         "name": "qtype",
         "dtype": "INT64",
-        "shape": [
-          "batch_size"
-        ]
+        "shape": ["batch_size"]
       }
     ],
     "outputs": [
       {
         "name": "logits",
         "dtype": "FLOAT",
-        "shape": [
-          "batch_size",
-          2
-        ]
+        "shape": ["batch_size", 2]
       }
     ],
     "operators": {
@@ -115,59 +98,39 @@
       {
         "name": "input_ids",
         "dtype": "INT64",
-        "shape": [
-          "batch_size",
-          "sequence_length"
-        ]
+        "shape": ["batch_size", "sequence_length"]
       },
       {
         "name": "attention_mask",
         "dtype": "INT64",
-        "shape": [
-          "batch_size",
-          "sequence_length"
-        ]
+        "shape": ["batch_size", "sequence_length"]
       },
       {
         "name": "marker_pos",
         "dtype": "INT64",
-        "shape": [
-          "batch_size",
-          2
-        ]
+        "shape": ["batch_size", 2]
       },
       {
         "name": "marker_mask",
         "dtype": "BOOL",
-        "shape": [
-          "batch_size",
-          2
-        ]
+        "shape": ["batch_size", 2]
       },
       {
         "name": "qtype",
         "dtype": "INT64",
-        "shape": [
-          "batch_size"
-        ]
+        "shape": ["batch_size"]
       }
     ],
     "outputs": [
       {
         "name": "logits",
         "dtype": "FLOAT",
-        "shape": [
-          "batch_size",
-          2
-        ]
+        "shape": ["batch_size", 2]
       },
       {
         "name": "linear_123",
         "dtype": "FLOAT",
-        "shape": [
-          1,
-          2
-        ]
+        "shape": [1, 2]
       }
     ],
     "operators": {

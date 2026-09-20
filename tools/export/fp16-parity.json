@@ -1,0 +1,50 @@
+{
+  "model": "laya-split-fp16.onnx",
+  "fixtures": [
+    {
+      "name": "orig-3q",
+      "max_abs_logits_vs_torch": 0.004021883010864258,
+      "max_abs_pooled_vs_fp32ort": 0.879638671875,
+      "max_rel_act_vs_torch": 0.00041074660839512944,
+      "max_calibrated_prob_drift": 0.0003476440906524658,
+      "max_confidence_drift": 0.0003476738929748535,
+      "label_flips": []
+    },
+    {
+      "name": "choice-3",
+      "max_abs_logits_vs_torch": 0.0016875267028808594,
+      "max_abs_pooled_vs_fp32ort": 0.879638671875,
+      "max_rel_act_vs_torch": 0.00041074666660279036,
+      "max_calibrated_prob_drift": 3.165006637573242e-5,
+      "max_confidence_drift": 0.00012046098709106445,
+      "label_flips": []
+    },
+    {
+      "name": "choice-2",
+      "max_abs_logits_vs_torch": 0.001583099365234375,
+      "max_abs_pooled_vs_fp32ort": 0.5067138671875,
+      "max_rel_act_vs_torch": 5.2657440392067656e-5,
+      "max_calibrated_prob_drift": 1.5694648027420044e-5,
+      "max_confidence_drift": 7.408857345581055e-5,
+      "label_flips": []
+    },
+    {
+      "name": "choice-6",
+      "max_abs_logits_vs_torch": 0.0018925666809082031,
+      "max_abs_pooled_vs_fp32ort": 0.4263916015625,
+      "max_rel_act_vs_torch": 2.1909852421231335e-6,
+      "max_calibrated_prob_drift": 0.0002104043960571289,
+      "max_confidence_drift": 6.23464584350586e-5,
+      "label_flips": []
+    },
+    {
+      "name": "mixed-batch",
+      "max_abs_logits_vs_torch": 0.009789466857910156,
+      "max_abs_pooled_vs_fp32ort": 1.0408935546875,
+      "max_rel_act_vs_torch": 0.0005684607895091176,
+      "max_calibrated_prob_drift": 0.00103721022605896,
+      "max_confidence_drift": 0.0015209317207336426,
+      "label_flips": []
+    }
+  ]
+}

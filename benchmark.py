@@ -66,7 +66,7 @@ def main():
     parser.add_argument("--devices", nargs="+", choices=["cpu", "mps"], default=["cpu", "mps"])
     parser.add_argument("--warmup", type=int, default=5)
     parser.add_argument("--repeats", type=int, default=20)
-    parser.add_argument("--output", type=Path, default=ROOT / "docs" / "mac-baseline.json")
+    parser.add_argument("--output", type=Path, default=ROOT / "packages" / "test-vectors" / "reports" / "mac-baseline.json")
     args = parser.parse_args()
     if args.repeats < 1 or args.warmup < 0:
         parser.error("repeats must be positive and warmup nonnegative")

@@ -1,5 +1,5 @@
 {
-  "js/**/*.ts": ["oxfmt --check", "oxlint"],
-  "playground/src/**/*.{ts,tsx}": ["oxfmt --check", "oxlint"],
-  "export/*.py": ["ruff check", "black --check"]
+  "packages/laya-js/**/*.ts": ["oxfmt --check", "oxlint"],
+  "apps/playground/src/**/*.{ts,tsx}": ["oxfmt --check", "oxlint"],
+  "tools/export/*.py": ["ruff check", "black --check"]
 }

@@ -1,0 +1,7 @@
+{
+  "name": "@laya/test-vectors",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Generated test vectors + parity reports shared by Python export pipeline, TS checks, and playground (never hand-edit)",
+  "files": ["vectors/", "reports/"]
+}

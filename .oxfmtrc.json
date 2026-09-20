@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "semi": true,
+  "singleQuote": true,
+  "printWidth": 120,
+  "sortPackageJson": false,
+  "ignorePatterns": [
+    "node_modules/",
+    "models/",
+    "upstream/",
+    ".venv/",
+    "packages/test-vectors/",
+    "apps/playground/public/reports/",
+    "apps/playground/public/js/",
+    "apps/playground/public/models/",
+    "packages/laya-js/src/tokenizer/",
+    "packages/laya-js/web-test/",
+    "apps/*/dist",
+    "packages/*/dist",
+    "dist/",
+    "*.log",
+    "package-lock.json"
+  ]
+}

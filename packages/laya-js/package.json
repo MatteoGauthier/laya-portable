@@ -1,0 +1,45 @@
+{
+  "name": "@laya/js",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/laya.ts",
+    "./package.json": "./package.json",
+    "./*.ts": "./src/*.ts",
+    "./src/*": "./src/*"
+  },
+  "files": [
+    "src/",
+    "bin/"
+  ],
+  "scripts": {
+    "test": "node --test tests/*.test.ts",
+    "check:bpe": "node scripts/check-bpe.ts",
+    "check:bpe-fuzz": "node scripts/check-bpe-fuzz.ts",
+    "check:tokenizer": "node scripts/check-tokenizer.ts",
+    "check:split": "node scripts/check-split.ts",
+    "check:node": "node scripts/run-node.ts",
+    "check:versions": "node scripts/check-versions.ts",
+    "check": "npm run check:bpe && npm run check:bpe-fuzz && npm run check:split",
+    "lint": "oxlint",
+    "format:check": "oxfmt --check .",
+    "format": "oxfmt --write .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "onnxruntime-node": "1.30.0",
+    "@laya/test-vectors": "*"
+  },
+  "devDependencies": {
+    "@huggingface/transformers": "4.3.0",
+    "onnxruntime-web": "1.30.0"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "laya": "./bin/cli.ts"
+  },
+  "description": "Portable Laya runtime: BPE tokenizer, ONNX decisions, calibration (strict TypeScript)"
+}

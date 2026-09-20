@@ -14,13 +14,13 @@ option. Nothing here has been published; paths below are repo-relative.
 
 `models/` is local-only; verify builds against `export/checksums.sha256`:
 
-| Artifact | Size | Status |
-|---|---:|---|
-| `laya-split-single.onnx` (FP32) | 1.6 GB | ✅ primary: CPU/WASM/WebGPU-basic |
-| `laya-split-fp16.onnx` | 806 MB | ✅ CPU/WASM (≤1e-03 drift); ⛔ WebGPU (4.11e-02) |
-| `laya-split-int8.onnx` | 405 MB | ⛔ phishing flip, no speedup |
-| `laya-split-4bit.onnx` | 395 MB | ⛔ WebGPU 3.35 error (CPU holds 13/13) |
-| `laya-faithful-single.onnx` | 1.6 GB | ✅ full-graph reference (pre-split) |
+| Artifact                        |   Size | Status                                           |
+| ------------------------------- | -----: | ------------------------------------------------ |
+| `laya-split-single.onnx` (FP32) | 1.6 GB | ✅ primary: CPU/WASM/WebGPU-basic                |
+| `laya-split-fp16.onnx`          | 806 MB | ✅ CPU/WASM (≤1e-03 drift); ⛔ WebGPU (4.11e-02) |
+| `laya-split-int8.onnx`          | 405 MB | ⛔ phishing flip, no speedup                     |
+| `laya-split-4bit.onnx`          | 395 MB | ⛔ WebGPU 3.35 error (CPU holds 13/13)           |
+| `laya-faithful-single.onnx`     | 1.6 GB | ✅ full-graph reference (pre-split)              |
 
 Plus: `js/tokenizer/` (BPE + config + temperatures), `export/act_head.npz`
 and `js/act_head.json` (split head weights), parity/accuracy fixtures.
@@ -35,7 +35,7 @@ and `js/act_head.json` (split head weights), parity/accuracy fixtures.
 
 ## Measured reference (Apple M4 Pro, 24 GB)
 
-- Torch MPS 1q/3q forward p50: 21.8 / 40.0 ms (`docs/mac-baseline.json`).
+- Torch MPS 1q/3q forward p50: 21.8 / 40.0 ms (`packages/test-vectors/reports/mac-baseline.json`).
 - ONNX CPU 1q/3q: 34.8 / 93.9 ms. Browser split WebGPU-basic 1q: 306 ms.
 - Accuracy harness: 13/13 torch, FP32, FP16, 4-bit-CPU; 12/13 INT8.
 

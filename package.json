@@ -1,0 +1,29 @@
+{
+  "name": "laya-test",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "test": "npm run test -ws --if-present",
+    "typecheck": "npm run typecheck -ws --if-present",
+    "lint": "oxlint",
+    "format:check": "oxfmt --check .",
+    "format": "oxfmt --write ."
+  },
+  "devDependencies": {
+    "oxfmt": "^0.68.0",
+    "oxlint": "^1.83.0",
+    "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "onnxruntime-web": "1.30.0",
+    "onnxruntime-common": "1.30.0"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "description": "Portable Laya decisions: FP32 ONNX + strict-TS runtime + browser worker"
+}

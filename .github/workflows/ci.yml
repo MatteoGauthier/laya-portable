@@ -8,14 +8,14 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: js
+        working-directory: packages/laya-js
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: js/package-lock.json
+          cache-dependency-path: package-lock.json
       - run: npm ci --ignore-scripts
       - run: npm run check:versions
       - run: npm test
@@ -33,14 +33,14 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: playground
+        working-directory: apps/playground
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: playground/package-lock.json
+          cache-dependency-path: package-lock.json
       - run: npm ci --ignore-scripts
       - run: npx tsc --noEmit
       - run: npx oxlint
@@ -68,5 +68,5 @@ jobs:
       - run: uv venv .venv --python 3.13
       - run: uv pip install --python .venv/bin/python -r requirements-benchmark.txt
       - run: git clone https://github.com/NandhaKishorM/laya upstream/laya && git -C upstream/laya checkout 6a5819129eb220570792e417e49723d697efd76f
-      - run: .venv/bin/python export/check_parity.py
+      - run: .venv/bin/python tools/export/check_parity.py
       - run: .venv/bin/python -m pytest tests/ -q
