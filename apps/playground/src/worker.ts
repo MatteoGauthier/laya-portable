@@ -22,7 +22,7 @@ import tokenizerUrl from '@laya/js/src/tokenizer/tokenizer.json?url';
 import configUrl from '@laya/js/src/tokenizer/rl_agent_config.json?url';
 import actBinUrl from '@laya/test-vectors/vectors/act_head.bin?url';
 import actMetaUrl from '@laya/test-vectors/vectors/act_head.meta.json?url';
-import { route, type CheckpointName } from '@laya/js/laya-router.ts';
+import { route, type CheckpointName } from '@laya/js/laya-routing.ts';
 
 type CheckpointSel = 'auto' | CheckpointName;
 
@@ -204,10 +204,11 @@ workerSelf.onmessage = (e: MessageEvent<WorkerRequest>) => {
         }
         downloadMs = performance.now() - tDl;
         const tSess = performance.now();
-        // Hosted builds serve the >25MB ORT wasm from R2 (Pages file cap);
-        // local dev keeps the default same-origin resolution.
+        // Hosted builds serve the >25MB ORT wasm and related loader scripts from
+        // the official pinned jsdelivr CDN (Pages 25MB file cap).
+        // Using the CDN avoids the blob URL dynamic import failures caused by custom hosts.
         if (MODELS_BASE.startsWith('http')) {
-          ort.env.wasm.wasmPaths = `${MODELS_BASE}/ort/`;
+          ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.30.0/dist/';
         }
         const tryBackends = backend === 'auto' ? ['webgpu', 'wasm'] : [backend];
         let lastErr: unknown = null;
