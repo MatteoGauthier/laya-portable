@@ -1,18 +1,10 @@
 // Pure-JS BPE for Laya tokenizer.json files (no bundler, no WASM).
-// Two pre-tokenizer modes, auto-detected from tokenizer.json:
-// - ByteLevel (english, typed-decisions): NFC, added-token longest-match
-//   split, GPT-2 regex, bytes_to_unicode mapping, BPE merge by rank.
-// - Metaspace (multilingual mmBERT): Replace(" "->"▁") normalizer (no NFC),
-//   added-token longest-match split, then per segment: split on \n runs
-//   (each \n-run is its own word), split before every ▁, prepend ▁ to each
-//   \n-separated part, BPE merge by rank over codepoints (no byte mapping),
-//   byte-fallback (<0xNN>) for unknown chars, fused UNK. Throws on missing
-//   vocab (loud).
+// ByteLevel (english, typed-decisions) and Metaspace (multilingual mmBERT,
+// space->▁, no NFC) auto-detected from tokenizer.json. Throws on missing vocab.
 import { LayaEncodeError } from './laya-errors.ts';
 import type { Tokenizer, TokenizerJson } from './laya-types.ts';
 
-// Fresh instance per call (module-global /g regex would race under
-// interleaved worker/main use via shared lastIndex).
+// New regex per call: module-global /g would race on shared lastIndex.
 const GPT2_SRC = `'s|'t|'re|'ve|'m|'ll|'d| ?\\p{L}+| ?\\p{N}+| ?[^\\s\\p{L}\\p{N}]+|\\s+(?!\\S)|\\s+`;
 const GPT2_FLAGS = 'gu';
 const WS_SENTINEL = '▁';
@@ -37,7 +29,6 @@ function bytesToUnicode(): Map<number, string> {
 
 export function loadBpeTokenizer(tj: TokenizerJson): Tokenizer {
   const vocab = new Map(Object.entries(tj.model.vocab));
-  // '\0' join is collision-safe: BPE pieces are byte-level unicode chars, never contain NUL.
   const rank = new Map(tj.model.merges.map(([a, b], i) => [`${a}\0${b}`, i]));
   const added = new Map(tj.added_tokens.map((a) => [a.content, { id: a.id, lstrip: !!a.lstrip, rstrip: !!a.rstrip }]));
   const addedByLen = [...added.keys()].sort((x, y) => y.length - x.length);
@@ -101,7 +92,6 @@ export function loadBpeTokenizer(tj: TokenizerJson): Tokenizer {
     }
     return ids;
   }
-  /** Byte-fallback for one unknown char: UTF-8 bytes as <0xNN> ids, else null. */
   function byteFallbackIds(ch: string): number[] | null {
     const ids: number[] = [];
     for (const b of te.encode(ch)) {
@@ -111,7 +101,6 @@ export function loadBpeTokenizer(tj: TokenizerJson): Tokenizer {
     }
     return ids;
   }
-  /** Resolve one BPE piece: vocab hit, else per-char byte fallback, else UNK/throw. */
   function lookupPiece(piece: string, context: string): number[] {
     const hit = vocab.get(piece);
     if (hit !== undefined) return [hit];
@@ -139,10 +128,7 @@ export function loadBpeTokenizer(tj: TokenizerJson): Tokenizer {
     }
     throw new LayaEncodeError(`missing vocab for ${JSON.stringify(piece)} in ${JSON.stringify(context.slice(0, 80))}`);
   }
-  /** Metaspace word split: \n-runs are own words; a ▁ followed by content
-   *  attaches to it, but a lone ▁ (before ▁ or at end) stands alone — it must
-   *  NOT BPE-merge with neighbours (Python emits one ▁ token per space).
-   *  ▁ is prepended to each \n-separated part (prepend always). */
+  // Metaspace split: \n-runs are own words, lone ▁ stands alone.
   function metaspaceWords(text: string): string[] {
     const words: string[] = [];
     for (const part of text.split(/(\n+)/u)) {
@@ -197,16 +183,13 @@ export function loadBpeTokenizer(tj: TokenizerJson): Tokenizer {
     if (spaceToSentinel) return text.replaceAll(' ', WS_SENTINEL);
     return text.normalize('NFC');
   }
-  /** Metaspace encode: added tokens split RAW text (they carry
-   *  normalized:false, and ▁-run entries must never match raw spaces);
-   *  each raw chunk is normalized (space→▁) only after splitting. */
-  function encodeMetaspaceText(text: string): number[] {
+  function encodeWith(text: string, encodeChunk: (chunk: string) => number[]): number[] {
     const ids: number[] = [];
     let i = 0;
     let buf = '';
     const flush = (): void => {
       if (buf) {
-        ids.push(...encodeMetaspace(normalize(buf)));
+        ids.push(...encodeChunk(buf));
         buf = '';
       }
     };
@@ -230,7 +213,6 @@ export function loadBpeTokenizer(tj: TokenizerJson): Tokenizer {
           if (mm) i += mm[0].length;
         }
       } else {
-        // Iterate by codepoint so surrogate pairs stay together.
         const cp = text.codePointAt(i);
         if (cp === undefined) throw new LayaEncodeError(`encode: bad codepoint at ${i}`);
         buf += String.fromCodePoint(cp);
@@ -240,47 +222,14 @@ export function loadBpeTokenizer(tj: TokenizerJson): Tokenizer {
     flush();
     return ids;
   }
+  // Metaspace splits added tokens on raw text (▁ entries never match raw
+  // spaces); each chunk is normalized only after splitting.
+  function encodeMetaspaceText(text: string): number[] {
+    return encodeWith(text, (chunk) => encodeMetaspace(normalize(chunk)));
+  }
   function encode(text: string): number[] {
     if (isMetaspace) return encodeMetaspaceText(text);
-    text = normalize(text);
-    const ids: number[] = [];
-    let i = 0;
-    let buf = '';
-    const flush = (): void => {
-      if (buf) {
-        ids.push(...encodePiece(buf));
-        buf = '';
-      }
-    };
-    while (i < text.length) {
-      let hit: string | null = null;
-      for (const a of addedByLen) {
-        if (text.startsWith(a, i)) {
-          hit = a;
-          break;
-        }
-      }
-      if (hit !== null) {
-        const spec = added.get(hit);
-        if (spec === undefined) throw new LayaEncodeError(`unknown added token ${JSON.stringify(hit)}`);
-        if (spec.lstrip) buf = buf.replace(/\s+$/u, '');
-        flush();
-        ids.push(spec.id);
-        i += hit.length;
-        if (spec.rstrip) {
-          const mm = /^\s+/u.exec(text.slice(i));
-          if (mm) i += mm[0].length;
-        }
-      } else {
-        // Iterate by codepoint so surrogate pairs stay together.
-        const cp = text.codePointAt(i);
-        if (cp === undefined) throw new LayaEncodeError(`encode: bad codepoint at ${i}`);
-        buf += String.fromCodePoint(cp);
-        i += cp > 0xffff ? 2 : 1;
-      }
-    }
-    flush();
-    return ids;
+    return encodeWith(normalize(text), encodePiece);
   }
   return {
     encode,

@@ -1,11 +1,5 @@
 #!/usr/bin/env node
-// laya CLI: run calibrated decisions from JSON state + questions.
-//
-//   node bin/cli.ts [--fp16] [--state '{"subject":".."}'] [--questions '{...}']
-//   node bin/cli.ts --state-file s.json --questions-file q.json [--model path.onnx]
-//   node bin/cli.ts --help | --json
-//
-// Runs directly on Node >=22 via type-stripping (no build step).
+// laya CLI: calibrated decisions from JSON state + questions.
 import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -40,7 +34,7 @@ Usage:
                [--state JSON] [--questions JSON]
                [--state-file f] [--questions-file f] [--json]
 Defaults to ${DEFAULT_MODEL};
---route auto-selects --checkpoint via the JS Router (B1), default english until B2 artifacts exist.`);
+--route auto-selects --checkpoint via the JS Router.`);
   process.exit(0);
 }
 

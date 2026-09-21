@@ -1,17 +1,7 @@
-// JS port of upstream/laya/laya/router.py routing (B1).
-// Pure decision logic is dependency-free and matches Python precedence:
-// explicit model > explicit task > detected workflow (opt-in) > explicit lang
-// > detected script/language > default.
-//
-// Model loading is async (LayaClient.open) unlike Python's sync Agent load,
-// so Router.load/preload are async with the same LRU semantics (max_loaded).
-// Per-checkpoint tokenizer/config/actHead paths come from laya-paths.ts
-// CHECKPOINT_* maps (B2 artifacts); english works today, multilingual and
-// typed-decisions throw a clear missing-artifact error until exported.
+// JS port of upstream router.py. Precedence: explicit model > task >
+// detected workflow (opt-in) > lang > detected script/language > default.
 import { analyse, type AnalyseResult } from './laya-lang.ts';
 import {
-  CHECKPOINT_ACT_BIN,
-  CHECKPOINT_ACT_META,
   CHECKPOINT_CONFIGS,
   CHECKPOINT_MODELS,
   CHECKPOINT_TOKENIZERS,
@@ -72,6 +62,14 @@ const TYPED_DECISION_WORKFLOWS: Record<string, ReadonlySet<string>> = {
 
 function repoStr(repo: string, sub: string | null): string {
   return sub ? `${repo}/${sub}` : repo;
+}
+
+async function closeQuietly(agent: RouterAgent | undefined): Promise<void> {
+  try {
+    await agent?.close?.();
+  } catch {
+    // ignore close errors on eviction/unload
+  }
 }
 
 export function normaliseName(name: string): ModelName {
@@ -258,16 +256,11 @@ export class Router {
       if (victim === undefined) break;
       const agent = this._agents.get(victim);
       this._agents.delete(victim);
-      try {
-        await agent?.close?.();
-      } catch {
-        /* ignore close errors on eviction */
-      }
+      await closeQuietly(agent);
     }
   }
 
   checkpointPaths(name: ModelName): LayaOpenOptions {
-    // B2 artifacts live next to models/; english paths always exist.
     return {
       model: CHECKPOINT_MODELS[name],
       tokenizer: CHECKPOINT_TOKENIZERS[name],
@@ -284,13 +277,6 @@ export class Router {
       return hit;
     }
     const overrides = this.models[key] ?? {};
-    // Route actHead bin/meta via laya-paths convention: LayaClient.open prefers
-    // DEFAULT_ACT_HEAD_BIN/META (english) — per-checkpoint bins are wired by
-    // passing actHead explicitly once B2 emits models/laya-*.act_head.bin.
-    // Until then multilingual/typed-decisions fail loudly on missing files.
-    const perCheckpointActBin = key === 'english' ? undefined : (CHECKPOINT_ACT_BIN[key] as string | undefined);
-    void perCheckpointActBin;
-    void CHECKPOINT_ACT_META;
     const agent = await this._open(key, { ...this.checkpointPaths(key), ...overrides });
     this._agents.set(key, agent);
     this._touch(key);
@@ -318,11 +304,7 @@ export class Router {
   async unload(name?: string): Promise<void> {
     if (name === undefined || name === null) {
       for (const agent of this._agents.values()) {
-        try {
-          await agent.close?.();
-        } catch {
-          /* ignore */
-        }
+        await closeQuietly(agent);
       }
       this._agents.clear();
       this._order = [];
@@ -332,11 +314,7 @@ export class Router {
     const agent = this._agents.get(key);
     this._agents.delete(key);
     this._order = this._order.filter((k) => k !== key);
-    try {
-      await agent?.close?.();
-    } catch {
-      /* ignore */
-    }
+    await closeQuietly(agent);
   }
 
   routeDecision(state: unknown, questions?: Questions | null, opts: RouteOptions = {}): RouteDecision {

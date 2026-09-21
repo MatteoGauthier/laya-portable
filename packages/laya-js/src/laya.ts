@@ -1,6 +1,4 @@
-// Minimal Node.js SDK facade: tokenizer + ONNX split model + calibration.
-// import { LayaClient } from './laya.ts';
-// const laya = await LayaClient.open(); console.log(await laya.predict(state, questions));
+// Node SDK: tokenizer + ONNX split model + calibration.
 import * as ort from 'onnxruntime-node';
 import { readFileSync, existsSync } from 'node:fs';
 import { loadBpeTokenizer } from './laya-bpe.ts';
@@ -69,10 +67,8 @@ export class LayaClient {
 
   static async open(opts: LayaOpenOptions = {}): Promise<LayaClient> {
     const modelPath = opts.model ?? DEFAULT_MODEL;
-    const [tokenizerJson, cfgJson] = await Promise.all([
-      Promise.resolve().then(() => readJson(opts.tokenizer ?? DEFAULT_TOKENIZER, 'tokenizer') as TokenizerJson),
-      Promise.resolve().then(() => readJson(opts.config ?? DEFAULT_CONFIG, 'config') as AgentConfigJson),
-    ]);
+    const tokenizerJson = readJson(opts.tokenizer ?? DEFAULT_TOKENIZER, 'tokenizer') as TokenizerJson;
+    const cfgJson = readJson(opts.config ?? DEFAULT_CONFIG, 'config') as AgentConfigJson;
     const c = new LayaClient();
     try {
       c.tok = loadBpeTokenizer(tokenizerJson);
@@ -86,21 +82,14 @@ export class LayaClient {
     } catch (err) {
       throw new LayaConfigError(`cannot load model: ${modelPath}`, { cause: err });
     }
-    // act_head: prefer binary fast path (1.1MB f32) over JSON (5.2MB text).
-    // Per-checkpoint bins (B2): resolve from model path when the caller did
-    // not pass explicit actHead/actHeadBin (english keeps legacy defaults).
-    const isMultilingual = modelPath.includes('multilingual');
-    const isTyped = modelPath.includes('typed-decisions');
-    const perModelBin = isMultilingual
-      ? CHECKPOINT_ACT_BIN['multilingual']
-      : isTyped
-        ? CHECKPOINT_ACT_BIN['typed-decisions']
-        : DEFAULT_ACT_HEAD_BIN;
-    const perModelMeta = isMultilingual
-      ? CHECKPOINT_ACT_META['multilingual']
-      : isTyped
-        ? CHECKPOINT_ACT_META['typed-decisions']
-        : DEFAULT_ACT_HEAD_META;
+    // Prefer binary act-head (1.1MB) over JSON (5.2MB).
+    const ckpt = modelPath.includes('multilingual')
+      ? 'multilingual'
+      : modelPath.includes('typed-decisions')
+        ? 'typed-decisions'
+        : null;
+    const perModelBin = ckpt ? CHECKPOINT_ACT_BIN[ckpt] : DEFAULT_ACT_HEAD_BIN;
+    const perModelMeta = ckpt ? CHECKPOINT_ACT_META[ckpt] : DEFAULT_ACT_HEAD_META;
     if (!opts.actHead && !opts.actHeadBin) {
       const binPath = opts.actHeadBin ?? perModelBin;
       const metaPath = opts.actHeadMeta ?? perModelMeta;

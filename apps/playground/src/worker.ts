@@ -1,5 +1,4 @@
-// Playground worker: end-to-end Laya text→answer (bundled by Vite).
-// ort bundled from npm (onnxruntime-web 1.30.0); shared pure-TS modules from @js.
+// Playground worker: text→answer (bundled by Vite).
 import * as ort from 'onnxruntime-web';
 import { loadBpeTokenizer } from '@laya/js/laya-bpe.ts';
 import { toInternal, buildSequence, collateItems, QTYPES } from '@laya/js/laya-preprocess.ts';
@@ -18,8 +17,7 @@ import type {
 } from '@laya/js/laya-types.ts';
 import { parseActHeadBin, type ActHeadMeta } from '@laya/js/act-bin-parse.ts';
 
-// Static assets served through Vite (?url): no public/ symlinks, no absolute
-// /js/* paths. Models stay out of the bundle (dev-only /models route).
+// Static assets via Vite (?url). Models stay out of the bundle.
 import tokenizerUrl from '@laya/js/src/tokenizer/tokenizer.json?url';
 import configUrl from '@laya/js/src/tokenizer/rl_agent_config.json?url';
 import actBinUrl from '@laya/test-vectors/vectors/act_head.bin?url';
@@ -28,9 +26,7 @@ import { route, type CheckpointName } from '@laya/js/laya-router.ts';
 
 type CheckpointSel = 'auto' | CheckpointName;
 
-// Base URL for gitignored weight/asset files. Local dev serves repo models/
-// at /models via vite.config.ts; hosted builds point at R2:
-//   VITE_MODELS_BASE_URL=https://pub-<hash>.r2.dev npm run build
+// Local dev serves repo models/ at /models; hosted builds point at R2.
 const MODELS_BASE = (import.meta.env.VITE_MODELS_BASE_URL as string | undefined) ?? '/models';
 
 const MODEL_URLS: Record<CheckpointName, { fp32: string; fp16: string | null }> = {
@@ -87,7 +83,6 @@ async function fetchWithProgress(url: string, onPct: (pct: number) => void): Pro
   if (!resp.ok) throw new Error(`fetch ${url}: HTTP ${resp.status}`);
   const total = Number(resp.headers.get('content-length'));
   if (!resp.body || !(total > 0)) {
-    // No streaming progress (missing content-length); single download, ORT loads from URL.
     return null;
   }
   const rd = resp.body.getReader();
@@ -110,10 +105,17 @@ async function fetchWithProgress(url: string, onPct: (pct: number) => void): Pro
 }
 
 const ASSET_CACHE = 'laya-assets-v2';
+const noopProgress = (_pct: number): void => undefined;
 
-// Cache-first for immutable versioned assets (tokenizer, config, act head,
-// models). First visit streams with progress and populates the cache;
-// repeat visits load from disk with no download events.
+async function releaseQuietly(sess: ort.InferenceSession | null): Promise<void> {
+  try {
+    await sess?.release?.();
+  } catch {
+    // ignore
+  }
+}
+
+// Cache-first for immutable assets; repeat visits skip the download.
 async function cachedBytes(url: string, onPct: (pct: number) => void): Promise<Uint8Array> {
   try {
     const cache = await caches.open(ASSET_CACHE);
@@ -127,12 +129,12 @@ async function cachedBytes(url: string, onPct: (pct: number) => void): Promise<U
       try {
         await cache.put(url, new Response(bytes.slice(), { headers: { 'content-length': String(bytes.length) } }));
       } catch {
-        /* quota or opaque failures: run uncached */
+        // quota: run uncached
       }
       return bytes;
     }
   } catch {
-    /* CacheStorage unavailable (private mode): fall through */
+    // CacheStorage unavailable: fall through to plain fetch
   }
   const resp = await fetch(url);
   if (!resp.ok) throw new Error(`fetch ${url}: HTTP ${resp.status}`);
@@ -144,8 +146,6 @@ workerSelf.onmessage = (e: MessageEvent<WorkerRequest>) => {
     const { state, questions, backend = 'auto', precision = 'fp32' } = e.data;
     const sel = (e.data.checkpoint ?? e.data.model ?? 'auto') as CheckpointSel;
     const langHint = e.data.lang;
-    // B1 routing: pure JS detection, no model load. Explicit checkpoint pins,
-    // 'auto' follows Python precedence (non-Latin -> multilingual).
     const decision =
       sel === 'auto'
         ? route(state, questions, langHint ? { lang: langHint } : {})
@@ -156,29 +156,21 @@ workerSelf.onmessage = (e: MessageEvent<WorkerRequest>) => {
     const modelTag = `${checkpoint}-${precision === 'fp16' && urls.fp16 ? 'fp16' : 'fp32'}`;
     try {
       const t0 = performance.now();
-      // Setup-phase marks for the waterfall (0 when served from cache/session).
       let downloadMs = 0;
       let sessionMs = 0;
       if (!tok || readyCheckpoint !== checkpoint) {
-        // Checkpoint switch: drop tokenizer/session/weights (LRU size 1 in worker).
         tok = null;
         temp = null;
         actW = null;
         if (sess) {
-          try {
-            await sess.release?.();
-          } catch {
-            /* ignore */
-          }
+          await releaseQuietly(sess);
           sess = null;
         }
         readyCheckpoint = checkpoint;
         post({ type: 'progress', stage: `tokenizer-${checkpoint}` });
-        // Parallelize tokenizer + config (was sequential); cached after first visit.
-        const noop = (_pct: number): void => undefined;
         const [tjBytes, cfgBytes] = await Promise.all([
-          cachedBytes(TOKENIZER_URLS[checkpoint], noop),
-          cachedBytes(CONFIG_URLS[checkpoint], noop),
+          cachedBytes(TOKENIZER_URLS[checkpoint], noopProgress),
+          cachedBytes(CONFIG_URLS[checkpoint], noopProgress),
         ]);
         const tj = JSON.parse(new TextDecoder().decode(tjBytes)) as TokenizerJson;
         const cfg = JSON.parse(new TextDecoder().decode(cfgBytes)) as {
@@ -197,26 +189,26 @@ workerSelf.onmessage = (e: MessageEvent<WorkerRequest>) => {
       if (!tokenizer || !temps) throw new Error('tokenizer not ready');
       if (!sess || readyModel !== modelTag) {
         if (sess && readyModel !== modelTag) {
-          try {
-            await sess.release?.();
-          } catch {
-            /* ignore */
-          }
+          await releaseQuietly(sess);
           sess = null;
         }
         post({ type: 'progress', stage: `model-${backend}-${modelTag}` });
-        // Cache-first: repeat visits skip the download entirely (no pct events).
         let bytes: Uint8Array | null = null;
         const tDl = performance.now();
         try {
           bytes = await cachedBytes(modelUrl, (pct) => post({ type: 'download', pct }));
         } catch (err) {
-          // Fall back to ORT-direct URL load (double download, but recovers).
+          // Fall back to ORT-direct URL load.
           console.warn('progress download failed, falling back:', err instanceof Error ? err.message : String(err));
           bytes = null;
         }
         downloadMs = performance.now() - tDl;
         const tSess = performance.now();
+        // Hosted builds serve the >25MB ORT wasm from R2 (Pages file cap);
+        // local dev keeps the default same-origin resolution.
+        if (MODELS_BASE.startsWith('http')) {
+          ort.env.wasm.wasmPaths = `${MODELS_BASE}/ort/`;
+        }
         const tryBackends = backend === 'auto' ? ['webgpu', 'wasm'] : [backend];
         let lastErr: unknown = null;
         for (const ep of tryBackends) {
@@ -244,11 +236,10 @@ workerSelf.onmessage = (e: MessageEvent<WorkerRequest>) => {
             `no backend worked: ${String(lastErr instanceof Error ? lastErr.message : lastErr).slice(0, 200)}`,
           );
         }
-        // Binary act head (1.1MB) over JSON (5.2MB); cached after first visit.
-        const noopAct = (_pct: number): void => undefined;
+        // Binary act head over JSON; cached after first visit.
         const [binBytes, metaBytes] = await Promise.all([
-          cachedBytes(ACT_BIN_URLS[checkpoint], noopAct),
-          cachedBytes(ACT_META_URLS[checkpoint], noopAct),
+          cachedBytes(ACT_BIN_URLS[checkpoint], noopProgress),
+          cachedBytes(ACT_META_URLS[checkpoint], noopProgress),
         ]);
         actW = parseActHeadBin(binBytes, JSON.parse(new TextDecoder().decode(metaBytes)) as ActHeadMeta);
         sessionMs = performance.now() - tSess;

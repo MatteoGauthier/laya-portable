@@ -1,4 +1,3 @@
-// B1 router tests: pure detection + precedence, no ONNX, no network.
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { analyse, detectScript, guessLatinLanguage, isEnglish } from '../src/laya-lang.ts';

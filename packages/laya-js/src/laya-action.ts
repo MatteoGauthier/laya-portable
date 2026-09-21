@@ -1,11 +1,6 @@
-// CPU action head for split-graph: mirrors DecisionModel forward tail exactly.
-// Inputs: logits [B][K] (uncalibrated), markerMask [B][K] bool, pooled [B][H],
-// weights {w0:[256][H+4], b0:[256], w2:[2][256], b2:[2]} (from export/act_head.npz).
-// H is 1024 for ModernBERT-large checkpoints (english, typed-decisions) and
-// 768 for mmBERT-base (multilingual) — inferred from w0, not hardcoded.
-// Output: act_logits [B][2].
-// GELU is torch.nn.functional.gelu exact (erf); ENT_EPS 1e-9 mirrors Python
-// DecisionModel tail (vs 1e-12 in calibration confidence) — intentional.
+// CPU action head: mirrors DecisionModel forward tail. Inputs: logits [B][K],
+// markerMask [B][K], pooled [B][H], weights from export/act_head.npz.
+// H inferred from w0 (1024 ModernBERT-large, 768 mmBERT-base).
 import { softmax } from './laya-postprocess.ts';
 import { LayaInferenceError } from './laya-errors.ts';
 import type { ActHeadWeights } from './laya-types.ts';
@@ -17,7 +12,7 @@ const HIDDEN_DIM = 256;
 const FEAT_DIM = 4;
 
 export function erf(x: number): number {
-  // Cody rational approximation, |err| < 1.2e-7 (single-precision sufficient; outputs compared at 1e-4)
+  // Cody approximation, |err| < 1.2e-7
   const a1 = 0.254829592;
   const a2 = -0.284496736;
   const a3 = 1.421413741;
@@ -49,7 +44,6 @@ export function actionLogits(
   }
   const B = logits.length;
   const out: number[][] = [];
-  // Pooled dim varies by backbone (1024 ModernBERT-large, 768 mmBERT-base).
   const w0cols = w.w0[0]?.length ?? 0;
   const pooledDim = w0cols - FEAT_DIM;
   if (pooledDim <= 0) throw new LayaInferenceError(`actionLogits: bad w0 cols ${w0cols}`);

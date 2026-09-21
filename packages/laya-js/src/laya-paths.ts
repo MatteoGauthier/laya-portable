@@ -1,28 +1,24 @@
-// Central repo-location constants. Keeps DEFAULT_MODEL / vectors / reports
-// paths in one place so package moves only touch this file.
+// Repo locations: package moves only touch this file.
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
-/** packages/laya-js (this package). */
+/** packages/laya-js. */
 export const PACKAGE_DIR = resolve(here, '..');
 /** Repo root. */
 export const REPO_ROOT = resolve(here, '..', '..', '..');
-/** Generated fixtures + weights shared with Python and playground. */
+/** Fixtures + weights shared with Python and playground. */
 export const VECTORS_DIR = join(REPO_ROOT, 'packages', 'test-vectors', 'vectors');
-/** Generated parity/accuracy reports. */
+/** Parity/accuracy reports. */
 export const REPORTS_DIR = join(REPO_ROOT, 'packages', 'test-vectors', 'reports');
 /** Local gitignored ONNX artifacts. */
 export const MODELS_DIR = join(REPO_ROOT, 'models');
 
-/** Canonical default model (single-file split FP32). CLI/worker/checks must match. */
+/** Default model (single-file split FP32). CLI/worker/checks must match. */
 export const DEFAULT_MODEL = join(MODELS_DIR, 'laya-split-single.onnx');
 
-/** B2 multi-checkpoint layout (built by tools/export/export_split.py --checkpoint).
- *  English reuses the canonical default; multilingual/typed-decisions are
- *  gitignored siblings in models/ plus per-checkpoint tokenizer/config/act-head
- *  emitted next to them. Router falls back to english until B2 artifacts exist. */
+/** Multi-checkpoint layout (built by export_split.py --checkpoint). */
 export type CheckpointName = 'english' | 'multilingual' | 'typed-decisions';
 
 export const CHECKPOINT_MODELS: Record<CheckpointName, string> = {

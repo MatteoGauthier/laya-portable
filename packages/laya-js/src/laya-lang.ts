@@ -1,9 +1,5 @@
-// Dependency-free language/script detection for routing between Laya checkpoints.
-// Faithful port of upstream/laya/laya/lang.py: script is the primary signal,
-// Latin language guess is best-effort stopword/diacritic heuristic.
-//
-// Routing only needs one decision: is this English Latin text, or something
-// the English checkpoint cannot read? Pass explicit model/lang when known.
+// Port of upstream lang.py: script is the primary signal, Latin guess is
+// best-effort stopwords/diacritics. Routing only asks: can English read this?
 export interface ScriptProfile {
   [script: string]: number;
 }
@@ -16,8 +12,7 @@ export interface AnalyseResult {
   non_latin_fraction: number;
 }
 
-// Unicode blocks the English (ModernBERT-large, 50k BPE) checkpoint cannot read.
-// Mirrors _SCRIPT_RANGES in lang.py.
+// Blocks the English checkpoint cannot read (mirrors _SCRIPT_RANGES).
 const SCRIPT_RANGES: ReadonlyArray<readonly [string, ReadonlyArray<readonly [number, number]>]> = [
   [
     'greek',
@@ -134,7 +129,7 @@ function scriptOf(cp: number): string | null {
   return null;
 }
 
-/** Collect string leaves of a state (str/dict/list), so detection sees content. Keys ignored. */
+/** Collect string leaves of a state (keys ignored: usually English). */
 export function iterText(state: unknown, depth = 0): string[] {
   if (depth > 6 || state === null || state === undefined) return [];
   if (typeof state === 'string') return [state];
@@ -151,12 +146,10 @@ export function iterText(state: unknown, depth = 0): string[] {
   return [];
 }
 
-/** Flatten a state into detection text (keys ignored: usually English). */
 export function stateText(state: unknown, maxChars = 4000): string {
   return iterText(state).join(' ').slice(0, maxChars);
 }
 
-/** Dominant script: 'latin', 'han', 'devanagari', ... or 'unknown' if no letters. */
 export function detectScript(text: string): string {
   const counts = new Map<string, number>();
   for (const ch of text) {
@@ -178,7 +171,6 @@ export function detectScript(text: string): string {
   return best;
 }
 
-/** Fraction of alphabetic chars per detected script. */
 export function scriptProfile(text: string): ScriptProfile {
   const counts = new Map<string, number>();
   for (const ch of text) {
@@ -198,7 +190,6 @@ export function scriptProfile(text: string): ScriptProfile {
   return out;
 }
 
-/** Best-effort language code for Latin text, or null when undecided. */
 export function guessLatinLanguage(text: string): string | null {
   const words = (text.match(WORD_RE) ?? []).map((w) => w.toLowerCase());
   if (words.length < 4) return null;
@@ -228,7 +219,6 @@ export function guessLatinLanguage(text: string): string | null {
   return en ? 'en' : null;
 }
 
-/** Full detection result for a state. */
 export function analyse(state: unknown): AnalyseResult {
   const text = stateText(state);
   const prof = scriptProfile(text);
@@ -250,7 +240,6 @@ export function analyse(state: unknown): AnalyseResult {
   };
 }
 
-/** True when the English checkpoint can be expected to read this state. */
 export function isEnglish(state: unknown): boolean {
   return analyse(state).is_english;
 }
