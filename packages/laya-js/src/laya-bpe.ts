@@ -1,6 +1,13 @@
-// Pure-JS ByteLevel BPE for Laya tokenizer.json (no bundler, no WASM).
-// Matches HF tokenizers: NFC, added-token longest-match split, GPT-2 regex,
-// bytes_to_unicode mapping, BPE merge by rank. Throws on missing vocab (loud).
+// Pure-JS BPE for Laya tokenizer.json files (no bundler, no WASM).
+// Two pre-tokenizer modes, auto-detected from tokenizer.json:
+// - ByteLevel (english, typed-decisions): NFC, added-token longest-match
+//   split, GPT-2 regex, bytes_to_unicode mapping, BPE merge by rank.
+// - Metaspace (multilingual mmBERT): Replace(" "->"▁") normalizer (no NFC),
+//   added-token longest-match split, then per segment: split on \n runs
+//   (each \n-run is its own word), split before every ▁, prepend ▁ to each
+//   \n-separated part, BPE merge by rank over codepoints (no byte mapping),
+//   byte-fallback (<0xNN>) for unknown chars, fused UNK. Throws on missing
+//   vocab (loud).
 import { LayaEncodeError } from './laya-errors.ts';
 import type { Tokenizer, TokenizerJson } from './laya-types.ts';
 
@@ -8,6 +15,7 @@ import type { Tokenizer, TokenizerJson } from './laya-types.ts';
 // interleaved worker/main use via shared lastIndex).
 const GPT2_SRC = `'s|'t|'re|'ve|'m|'ll|'d| ?\\p{L}+| ?\\p{N}+| ?[^\\s\\p{L}\\p{N}]+|\\s+(?!\\S)|\\s+`;
 const GPT2_FLAGS = 'gu';
+const WS_SENTINEL = '▁';
 
 function bytesToUnicode(): Map<number, string> {
   const bs: number[] = [];
@@ -35,6 +43,23 @@ export function loadBpeTokenizer(tj: TokenizerJson): Tokenizer {
   const addedByLen = [...added.keys()].sort((x, y) => y.length - x.length);
   const b2u = bytesToUnicode();
   const te = new TextEncoder();
+  const isMetaspace = tj.pre_tokenizer?.type === 'Metaspace';
+  const spaceToSentinel =
+    tj.normalizer?.type === 'Replace' && tj.normalizer.pattern?.String === ' ' && tj.normalizer.content === WS_SENTINEL;
+  const byteFallback = tj.model.byte_fallback ?? isMetaspace;
+  const fuseUnk = tj.model.fuse_unk ?? false;
+  const unkId = vocab.get(tj.model.unk_token ?? '<unk>');
+  const pickSpecial = (cands: string[], label: string): { token: string; id: number } => {
+    for (const c of cands) {
+      const v = added.get(c)?.id ?? vocab.get(c);
+      if (v !== undefined) return { token: c, id: v };
+    }
+    throw new LayaEncodeError(`no id for ${cands[0]} (${label})`);
+  };
+  const mask = pickSpecial(['[MASK]', '<mask>'], 'mask');
+  const cls = pickSpecial(['[CLS]', '<bos>'], 'cls');
+  const sep = pickSpecial(['[SEP]', '<eos>'], 'sep');
+  const pad = pickSpecial(['[PAD]', '<pad>'], 'pad');
   function bpe(word: string): string[] {
     let parts = [...word];
     if (parts.length <= 1) return parts;
@@ -76,8 +101,148 @@ export function loadBpeTokenizer(tj: TokenizerJson): Tokenizer {
     }
     return ids;
   }
+  /** Byte-fallback for one unknown char: UTF-8 bytes as <0xNN> ids, else null. */
+  function byteFallbackIds(ch: string): number[] | null {
+    const ids: number[] = [];
+    for (const b of te.encode(ch)) {
+      const id = vocab.get(`<0x${b.toString(16).toUpperCase().padStart(2, '0')}>`);
+      if (id === undefined) return null;
+      ids.push(id);
+    }
+    return ids;
+  }
+  /** Resolve one BPE piece: vocab hit, else per-char byte fallback, else UNK/throw. */
+  function lookupPiece(piece: string, context: string): number[] {
+    const hit = vocab.get(piece);
+    if (hit !== undefined) return [hit];
+    if (byteFallback) {
+      const out: number[] = [];
+      for (const ch of piece) {
+        const h = vocab.get(ch);
+        if (h !== undefined) {
+          out.push(h);
+          continue;
+        }
+        const fb = byteFallbackIds(ch);
+        if (fb === null) {
+          if (unkId === undefined) {
+            throw new LayaEncodeError(
+              `missing vocab for ${JSON.stringify(ch)} in ${JSON.stringify(context.slice(0, 80))}`,
+            );
+          }
+          out.push(unkId);
+          continue;
+        }
+        out.push(...fb);
+      }
+      return out;
+    }
+    throw new LayaEncodeError(`missing vocab for ${JSON.stringify(piece)} in ${JSON.stringify(context.slice(0, 80))}`);
+  }
+  /** Metaspace word split: \n-runs are own words; a ▁ followed by content
+   *  attaches to it, but a lone ▁ (before ▁ or at end) stands alone — it must
+   *  NOT BPE-merge with neighbours (Python emits one ▁ token per space).
+   *  ▁ is prepended to each \n-separated part (prepend always). */
+  function metaspaceWords(text: string): string[] {
+    const words: string[] = [];
+    for (const part of text.split(/(\n+)/u)) {
+      if (part === '') continue;
+      if (/^\n+$/u.test(part)) {
+        words.push(part);
+        continue;
+      }
+      let i = 0;
+      let first = true;
+      while (i < part.length) {
+        const ch = part[i] as string;
+        if (ch === WS_SENTINEL) {
+          const nxt = i + 1 < part.length ? part[i + 1] : undefined;
+          if (nxt !== undefined && nxt !== WS_SENTINEL) {
+            let j = i + 1;
+            while (j < part.length && part[j] !== WS_SENTINEL) j++;
+            words.push(part.slice(i, j));
+            i = j;
+          } else {
+            words.push(WS_SENTINEL);
+            i++;
+          }
+        } else {
+          let j = i;
+          while (j < part.length && part[j] !== WS_SENTINEL) j++;
+          const chunk = part.slice(i, j);
+          words.push(first && !chunk.startsWith(WS_SENTINEL) ? WS_SENTINEL + chunk : chunk);
+          i = j;
+        }
+        first = false;
+      }
+    }
+    return words;
+  }
+  function encodeMetaspace(text: string): number[] {
+    const ids: number[] = [];
+    let lastWasUnk = false;
+    const push = (more: number[]): void => {
+      for (const id of more) {
+        if (fuseUnk && unkId !== undefined && id === unkId && lastWasUnk) continue;
+        ids.push(id);
+        lastWasUnk = unkId !== undefined && id === unkId;
+      }
+    };
+    for (const word of metaspaceWords(text)) {
+      for (const tok of bpe(word)) push(lookupPiece(tok, text));
+    }
+    return ids;
+  }
+  function normalize(text: string): string {
+    if (spaceToSentinel) return text.replaceAll(' ', WS_SENTINEL);
+    return text.normalize('NFC');
+  }
+  /** Metaspace encode: added tokens split RAW text (they carry
+   *  normalized:false, and ▁-run entries must never match raw spaces);
+   *  each raw chunk is normalized (space→▁) only after splitting. */
+  function encodeMetaspaceText(text: string): number[] {
+    const ids: number[] = [];
+    let i = 0;
+    let buf = '';
+    const flush = (): void => {
+      if (buf) {
+        ids.push(...encodeMetaspace(normalize(buf)));
+        buf = '';
+      }
+    };
+    while (i < text.length) {
+      let hit: string | null = null;
+      for (const a of addedByLen) {
+        if (text.startsWith(a, i)) {
+          hit = a;
+          break;
+        }
+      }
+      if (hit !== null) {
+        const spec = added.get(hit);
+        if (spec === undefined) throw new LayaEncodeError(`unknown added token ${JSON.stringify(hit)}`);
+        if (spec.lstrip) buf = buf.replace(/\s+$/u, '');
+        flush();
+        ids.push(spec.id);
+        i += hit.length;
+        if (spec.rstrip) {
+          const mm = /^\s+/u.exec(text.slice(i));
+          if (mm) i += mm[0].length;
+        }
+      } else {
+        // Iterate by codepoint so surrogate pairs stay together.
+        const cp = text.codePointAt(i);
+        if (cp === undefined) throw new LayaEncodeError(`encode: bad codepoint at ${i}`);
+        buf += String.fromCodePoint(cp);
+        i += cp > 0xffff ? 2 : 1;
+      }
+    }
+    flush();
+    return ids;
+  }
   function encode(text: string): number[] {
-    text = text.normalize('NFC');
+    if (isMetaspace) return encodeMetaspaceText(text);
+    text = normalize(text);
     const ids: number[] = [];
     let i = 0;
     let buf = '';
@@ -117,17 +282,12 @@ export function loadBpeTokenizer(tj: TokenizerJson): Tokenizer {
     flush();
     return ids;
   }
-  const id = (s: string): number => {
-    const v = added.get(s)?.id ?? vocab.get(s);
-    if (v === undefined) throw new LayaEncodeError(`no id for ${s}`);
-    return v;
-  };
   return {
     encode,
-    maskToken: '[MASK]',
-    maskId: id('[MASK]'),
-    clsId: id('[CLS]'),
-    sepId: id('[SEP]'),
-    padId: id('[PAD]'),
+    maskToken: mask.token,
+    maskId: mask.id,
+    clsId: cls.id,
+    sepId: sep.id,
+    padId: pad.id,
   };
 }

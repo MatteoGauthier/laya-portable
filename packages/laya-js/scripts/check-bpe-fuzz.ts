@@ -1,14 +1,23 @@
 // Fuzz pure-JS BPE vs Python (206 cases incl. unicode, spaces, added tokens).
 // Runs directly on Node >=22 via type-stripping (no build step).
+// Defaults gate the english tokenizer; --tokenizer/--fuzz gate any checkpoint:
+//   node scripts/check-bpe-fuzz.ts --tokenizer=../../models/laya-multilingual.tokenizer.json \
+//     --fuzz=bpe-fuzz.multilingual.json
 import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { loadBpeTokenizer } from '../src/laya-bpe.ts';
-import { DEFAULT_TOKENIZER } from '../src/laya-paths.ts';
+import { DEFAULT_TOKENIZER, VECTORS_DIR } from '../src/laya-paths.ts';
 import { vectorsFile } from '../tests/test-helpers.ts';
 import type { TokenizerJson } from '../src/laya-types.ts';
 
-const tj = JSON.parse(readFileSync(DEFAULT_TOKENIZER, 'utf8')) as TokenizerJson;
+const tokArg = process.argv.find((a) => a.startsWith('--tokenizer='));
+const fuzzArg = process.argv.find((a) => a.startsWith('--fuzz='));
+const tokPath = tokArg ? tokArg.slice('--tokenizer='.length) : DEFAULT_TOKENIZER;
+const fuzzPath = fuzzArg ? join(VECTORS_DIR, fuzzArg.slice('--fuzz='.length)) : vectorsFile('bpe-fuzz.json');
+
+const tj = JSON.parse(readFileSync(tokPath, 'utf8')) as TokenizerJson;
 const tok = loadBpeTokenizer(tj);
-const cases = JSON.parse(readFileSync(vectorsFile('bpe-fuzz.json'), 'utf8')) as { text: string; ids: number[] }[];
+const cases = JSON.parse(readFileSync(fuzzPath, 'utf8')) as { text: string; ids: number[] }[];
 let pass = 0;
 const fails: [number, string, string][] = [];
 for (let i = 0; i < cases.length; i++) {

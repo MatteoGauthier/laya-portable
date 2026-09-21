@@ -39,14 +39,24 @@ class SplitWrapper(nn.Module):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--output", type=Path, default=ROOT/"models"/"laya-split.onnx")
+    ap.add_argument("--model", default=None, help="Local checkpoint dir (default: pinned HF cache)")
+    ap.add_argument("--repo", default="convaiinnovations/laya")
+    ap.add_argument("--revision", default=REVISION)
+    ap.add_argument("--subfolder", default=None, help="None (english), multilingual, typed-decisions")
+    ap.add_argument("--vocab-size", type=int, default=50000)
+    ap.add_argument("--checkpoint", default=None, help="Asset name for models/laya-<checkpoint>.* outputs (B2)")
     args = ap.parse_args()
     import laya
     from huggingface_hub import snapshot_download
-    mp = snapshot_download("convaiinnovations/laya", revision=REVISION, local_files_only=True)
+    if args.model:
+        mp = args.model
+    else:
+        base = snapshot_download(args.repo, revision=args.revision, local_files_only=True)
+        mp = str(Path(base) / args.subfolder) if args.subfolder else base
     agent = laya.load(mp, device="cpu")
     w = SplitWrapper(agent.model).eval()
     B, S, K = 2, 32, 3
-    dummy = (torch.randint(0, 50000, (B, S)), torch.ones((B, S), dtype=torch.long),
+    dummy = (torch.randint(0, args.vocab_size, (B, S)), torch.ones((B, S), dtype=torch.long),
              torch.tensor([[5, 10, 15], [6, 12, 0]]), torch.tensor([[True]*3, [True, True, False]]),
              torch.tensor([0, 1]))
     with torch.no_grad():
@@ -68,11 +78,25 @@ def main():
     ops = dict(sorted(Counter(n.op_type for n in m.graph.node).items()))
     print(f"export ok: {args.output.stat().st_size/1e6:.1f} MB graph, ops removed vs full: "
           f"{set(['TopK','Log','ReduceSum']) - set(ops)}", flush=True)
-    # Save act_head weights + metadata for CPU/JS side
+    # Save act_head weights + metadata for CPU/JS side.
+    # B2: per-checkpoint npz when --checkpoint is set, else legacy act_head.npz.
     sd = agent.model.act_head.state_dict()
     import numpy as np
-    np.savez(ROOT/"tools"/"export"/"act_head.npz", **{k: v.numpy() for k, v in sd.items()})
-    print(f"act_head weights: {list(sd.keys())}", flush=True)
+    import shutil
+    ckpt = args.checkpoint or args.subfolder or None
+    npz_name = f"act_head.{ckpt}.npz" if ckpt else "act_head.npz"
+    np.savez(ROOT/"tools"/"export"/npz_name, **{k: v.numpy() for k, v in sd.items()})
+    print(f"act_head weights: {list(sd.keys())} pooled_dim={po.shape[-1]} -> {npz_name}", flush=True)
+    # B2 asset bundle: tokenizer + config next to models/ with laya-paths naming.
+    if ckpt:
+        tok_src = Path(mp) / "tokenizer" / "tokenizer.json"
+        cfg_src = Path(mp) / "rl_agent_config.json"
+        if tok_src.exists():
+            shutil.copy(tok_src, ROOT/"models"/f"laya-{ckpt}.tokenizer.json")
+            print(f"tokenizer -> models/laya-{ckpt}.tokenizer.json", flush=True)
+        if cfg_src.exists():
+            shutil.copy(cfg_src, ROOT/"models"/f"laya-{ckpt}.rl_agent_config.json")
+            print(f"config -> models/laya-{ckpt}.rl_agent_config.json", flush=True)
     # Single-file for browser
     m2 = onnx.load(str(args.output), load_external_data=True)
     for i in m2.graph.initializer:

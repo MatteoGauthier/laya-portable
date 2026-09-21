@@ -21,6 +21,30 @@ Not an Android release yet.
 .venv/bin/python export/emit_bpe_fuzz.py       # -> js/bpe-fuzz.json
 ```
 
+## B2 multi-checkpoint (english + multilingual + typed-decisions)
+
+`export_onnx.py` and `export_split.py` take `--repo/--revision/--subfolder`
+(`None` = english root, `multilingual`, `typed-decisions`) and `--vocab-size`
+(50000, 256000 for multilingual). `export_split.py` also takes `--checkpoint`
+to name B2 assets with the `laya-paths.ts` convention:
+
+```sh
+.venv/bin/python tools/export/export_split.py --subfolder multilingual --vocab-size 256000 \
+  --checkpoint multilingual --output models/laya-multilingual-split.onnx
+.venv/bin/python tools/export/export_split.py --subfolder typed-decisions \
+  --checkpoint typed-decisions --output models/laya-typed-decisions-split.onnx
+.venv/bin/python tools/export/emit_act_bin.py --npz tools/export/act_head.multilingual.npz --checkpoint multilingual
+.venv/bin/python tools/export/emit_act_bin.py --npz tools/export/act_head.typed-decisions.npz --checkpoint typed-decisions
+```
+
+Each `--checkpoint <name>` writes `models/laya-<name>-split(-single).onnx`
+plus `laya-<name>.tokenizer.json`, `laya-<name>.rl_agent_config.json` and
+`laya-<name>.act_head.bin(.meta.json)` sidecars. Verified: multilingual
+smoke `pooled [1,768]` finite, typed-decisions `pooled [1,1024]` finite;
+full torch-vs-ONNX parity per checkpoint is follow-up
+(`check_parity.py` already accepts `--model/--onnx`). `emit_act_bin.py`
+asserts `w0 [256,H+4]` with H in (1024, 768).
+
 All converters take `--src/--dst` (`export_onnx.py` also `--opset`,
 `to_4bit.py` also `--bits/--block-size`); `check_parity.py` takes
 `--model/--onnx` and exits 1 on drift (CI-gatable). Checkpoint resolution uses
@@ -112,7 +136,7 @@ WebGPU improves 4.11e-02 → 2.94e-02 (167ms) — softmax is ~30% of the gap,
 the rest is FP16 matmul accumulation. Still 300× over the 1e-4 gate:
 verdict stands.
 
-## Accuracy harness + INT8/4-bit verdicts
+## Accuracy harness + INT8/4-bit verdicts (english root)
 
 `check_accuracy.py` runs 13 weak directional checks (billing intent, phishing,
 guardrails, moderation, triage, original anchors) per variant with margins:
@@ -133,6 +157,51 @@ issue. Rejected for WebGPU pending ORT updates.
 Net Phase 3: ship FP16 for CPU/WASM (documented 1e-03 drift), FP32 split for
 WebGPU. Naive INT8 and 4-bit/WebGPU are out; selective/static quantization
 with calibration data is the deeper follow-up, gated by this harness.
+
+## B2 checkpoints: parity, BPE, FP16, accuracy (2026-09-20)
+
+`check_split_parity.py` gates what ships (torch full vs split ONNX + numpy
+head, same 5 fixtures and 1e-4 thresholds as `check_parity.py`):
+
+| Checkpoint | Logits drift | Calibrated pdrift | Labels | Report |
+| ---------- | -----------: | ----------------: | ------ | ------ |
+| multilingual (768-dim pooled) | ≤2.38e-05 | ≤1e-06 | 5/5 OK | `parity-split-multilingual.json` |
+| typed-decisions (1024-dim pooled) | ≤7.27e-06 | ≤1e-06 | 5/5 OK | `parity-split-typed-decisions.json` |
+
+Pure-JS BPE covers all three tokenizers (206/206 fuzz each):
+english + typed-decisions share the ByteLevel loader; multilingual uses the
+new Metaspace mode (`laya-bpe.ts`: Replace-space normalizer, split on \n
+runs, split before ▁ with lone-▁ isolation, ▁-prepend per \n-part, added
+tokens matched on raw text, byte-fallback `<0xNN>`, fused UNK).
+`npm run check:bpe-fuzz-ml` / `check:bpe-fuzz-typed` gate the sidecar
+tokenizers in `models/`. Key subtlety found by fuzz: ▁-run added tokens must
+never match post-normalizer text (raw spaces aren't ▁ until normalized).
+
+FP16 (`check_fp16.py --subfolder …`, per-checkpoint fixtures/temperatures):
+
+| Checkpoint | dlogits | pdrift | Flips | Verdict |
+| ---------- | ------: | -----: | ----- | ------- |
+| multilingual (616MB) | ≤8.83e-02 | ≤1.53e-03 | none | ✅ CPU/WASM only, looser bound documented |
+| typed-decisions (0.85GB) | ≤2.86e-03 | ≤3.02e-04 | none | ✅ CPU/WASM only, inside english bar |
+
+Pooled drift looks large in absolute terms (≤0.41 multilingual, ≤0.93 typed)
+but pooled feeds only the saturated action head (relative act drift ≤7.3e-04)
+— harmless on probed inputs, same caveat as english. A `--keep-scorer`
+multilingual variant was attempted to tighten logits; result pending.
+
+Accuracy harness (`check_accuracy.py --checkpoint …`, gate = ONNX must match
+same-checkpoint torch decisions on all 13; torch absolute informational):
+
+| Checkpoint | torch | fp32 | fp16 | int8 | 4-bit |
+| ---------- | ----: | ---: | ---: | ---: | ----: |
+| multilingual | 12/13 | 12/13 =torch | 12/13 =torch | 11/13 ⛔ guard-benign flip | 12/13 =torch ⚠️ CPU-only |
+| typed-decisions | 13/13 | 13/13 | 13/13 | 13/13 ⚠️ unshipped | 13/13 ⚠️ CPU-only |
+
+Notes: multilingual torch itself false-positives one legit-billing email
+(0.9984 phishing) — script/language routing, not confidence gating, is the
+answer (see B1). Typed INT8 is 13/13 with ~14% single-probe speedup but stays
+unshipped on weak-harness evidence alone. 4-bit WebGPU is untested for B2
+(english-4bit is kernel-broken there); CPU-gated only.
 
 ## Public datasets (`bench_public.py` → `public-benchmark.json`)
 

@@ -1,0 +1,393 @@
+{
+  "checkpoint": "multilingual",
+  "model_revision": "c5d78730f3493e4fe16d61507ef4b78eef7318cf",
+  "source_commit": "6a5819129eb220570792e417e49723d697efd76f",
+  "onnx": "models/laya-multilingual-split-single.onnx",
+  "ort_version": "1.30.0",
+  "torch_version": "2.14.0",
+  "pooled_dim": 768,
+  "fixtures": [
+    {
+      "name": "orig-3q",
+      "batch": 3,
+      "seq_len": 64,
+      "kmax": 3,
+      "k_per_q": [
+        3,
+        3,
+        2
+      ],
+      "qtypes": [
+        0,
+        1,
+        2
+      ],
+      "max_abs_logits": 2.384185791015625e-05,
+      "mean_abs_logits": 6.943941116333008e-06,
+      "max_abs_act_logits": 0.001220703125,
+      "max_rel_act_logits": 8.354595593118574e-07,
+      "max_calibrated_prob_drift": 0.0,
+      "max_act_prob_drift": 0.0,
+      "labels_match": true,
+      "torch": {
+        "department": {
+          "probs": {
+            "billing": 0.999994,
+            "technical": 2e-06,
+            "sales": 4e-06
+          },
+          "choice": "billing",
+          "confidence": 0.9999,
+          "act": 1.0,
+          "raw_logits": [
+            8.487186431884766,
+            -4.566205978393555,
+            -3.9920859336853027
+          ]
+        },
+        "urgency": {
+          "probs": {
+            "0": 0.003958,
+            "1": 0.10771,
+            "2": 0.888332
+          },
+          "score": 1.884374,
+          "confidence": 0.6659,
+          "act": 1.0,
+          "raw_logits": [
+            -3.8094940185546875,
+            -0.505743145942688,
+            1.6041570901870728
+          ]
+        },
+        "churn_risk": {
+          "noul": 0.000627,
+          "confidence": 0.9994,
+          "act": 1.0,
+          "raw_logits": [
+            6.647651672363281,
+            -0.7259124517440796
+          ]
+        }
+      },
+      "onnx": {
+        "department": {
+          "probs": {
+            "billing": 0.999994,
+            "technical": 2e-06,
+            "sales": 4e-06
+          },
+          "choice": "billing",
+          "confidence": 0.9999,
+          "act": 1.0,
+          "raw_logits": [
+            8.487162590026855,
+            -4.566212177276611,
+            -3.992093563079834
+          ]
+        },
+        "urgency": {
+          "probs": {
+            "0": 0.003958,
+            "1": 0.10771,
+            "2": 0.888332
+          },
+          "score": 1.884374,
+          "confidence": 0.6659,
+          "act": 1.0,
+          "raw_logits": [
+            -3.809497833251953,
+            -0.5057410001754761,
+            1.6041620969772339
+          ]
+        },
+        "churn_risk": {
+          "noul": 0.000627,
+          "confidence": 0.9994,
+          "act": 1.0,
+          "raw_logits": [
+            6.647646427154541,
+            -0.7259141206741333
+          ]
+        }
+      }
+    },
+    {
+      "name": "choice-3",
+      "batch": 1,
+      "seq_len": 62,
+      "kmax": 3,
+      "k_per_q": [
+        3
+      ],
+      "qtypes": [
+        0
+      ],
+      "max_abs_logits": 1.71661376953125e-05,
+      "mean_abs_logits": 1.136461924033938e-05,
+      "max_abs_act_logits": 0.000244140625,
+      "max_rel_act_logits": 1.6762514576385001e-07,
+      "max_calibrated_prob_drift": 0.0,
+      "max_act_prob_drift": 0.0,
+      "labels_match": true,
+      "torch": {
+        "department": {
+          "probs": {
+            "billing": 0.999994,
+            "technical": 2e-06,
+            "sales": 4e-06
+          },
+          "choice": "billing",
+          "confidence": 0.9999,
+          "act": 1.0,
+          "raw_logits": [
+            8.487211227416992,
+            -4.566205978393555,
+            -3.9920871257781982
+          ]
+        }
+      },
+      "onnx": {
+        "department": {
+          "probs": {
+            "billing": 0.999994,
+            "technical": 2e-06,
+            "sales": 4e-06
+          },
+          "choice": "billing",
+          "confidence": 0.9999,
+          "act": 1.0,
+          "raw_logits": [
+            8.487228393554688,
+            -4.566212177276611,
+            -3.992097854614258
+          ]
+        }
+      }
+    },
+    {
+      "name": "choice-2",
+      "batch": 1,
+      "seq_len": 50,
+      "kmax": 2,
+      "k_per_q": [
+        2
+      ],
+      "qtypes": [
+        0
+      ],
+      "max_abs_logits": 1.2874603271484375e-05,
+      "mean_abs_logits": 9.059906005859375e-06,
+      "max_abs_act_logits": 0.0001220703125,
+      "max_rel_act_logits": 8.214611568746477e-08,
+      "max_calibrated_prob_drift": 0.0,
+      "max_act_prob_drift": 0.0,
+      "labels_match": true,
+      "torch": {
+        "dept2": {
+          "probs": {
+            "billing": 0.999996,
+            "technical": 4e-06
+          },
+          "choice": "billing",
+          "confidence": 0.9999,
+          "act": 1.0,
+          "raw_logits": [
+            7.871630668640137,
+            -4.565980911254883
+          ]
+        }
+      },
+      "onnx": {
+        "dept2": {
+          "probs": {
+            "billing": 0.999996,
+            "technical": 4e-06
+          },
+          "choice": "billing",
+          "confidence": 0.9999,
+          "act": 1.0,
+          "raw_logits": [
+            7.871617794036865,
+            -4.565986156463623
+          ]
+        }
+      }
+    },
+    {
+      "name": "choice-6",
+      "batch": 1,
+      "seq_len": 82,
+      "kmax": 6,
+      "k_per_q": [
+        6
+      ],
+      "qtypes": [
+        0
+      ],
+      "max_abs_logits": 4.76837158203125e-06,
+      "mean_abs_logits": 2.9404957331280457e-06,
+      "max_abs_act_logits": 0.0001220703125,
+      "max_rel_act_logits": 1.0031590136350133e-07,
+      "max_calibrated_prob_drift": 1.000000000001e-06,
+      "max_act_prob_drift": 0.0,
+      "labels_match": true,
+      "torch": {
+        "dept6": {
+          "probs": {
+            "team0": 0.160139,
+            "team1": 0.16,
+            "team2": 0.164481,
+            "team3": 0.169584,
+            "team4": 0.1723,
+            "team5": 0.173495
+          },
+          "choice": "team5",
+          "confidence": 0.0003,
+          "act": 1.0,
+          "raw_logits": [
+            -4.584211349487305,
+            -4.585077285766602,
+            -4.5574541091918945,
+            -4.526899337768555,
+            -4.511011123657227,
+            -4.504098892211914
+          ]
+        }
+      },
+      "onnx": {
+        "dept6": {
+          "probs": {
+            "team0": 0.160139,
+            "team1": 0.16,
+            "team2": 0.164481,
+            "team3": 0.169584,
+            "team4": 0.1723,
+            "team5": 0.173496
+          },
+          "choice": "team5",
+          "confidence": 0.0003,
+          "act": 1.0,
+          "raw_logits": [
+            -4.5842132568359375,
+            -4.585079669952393,
+            -4.5574564933776855,
+            -4.526904106140137,
+            -4.511015892028809,
+            -4.504100322723389
+          ]
+        }
+      }
+    },
+    {
+      "name": "mixed-batch",
+      "batch": 3,
+      "seq_len": 74,
+      "kmax": 5,
+      "k_per_q": [
+        5,
+        2,
+        2
+      ],
+      "qtypes": [
+        0,
+        2,
+        1
+      ],
+      "max_abs_logits": 7.152557373046875e-06,
+      "mean_abs_logits": 4.337893642514246e-06,
+      "max_abs_act_logits": 0.0023193359375,
+      "max_rel_act_logits": 1.4843838016531663e-06,
+      "max_calibrated_prob_drift": 1.0000000000287557e-06,
+      "max_act_prob_drift": 0.0,
+      "labels_match": true,
+      "torch": {
+        "a_choice5": {
+          "probs": {
+            "o0": 0.299483,
+            "o1": 0.355682,
+            "o2": 0.12933,
+            "o3": 0.113025,
+            "o4": 0.102479
+          },
+          "choice": "o1",
+          "confidence": 0.0847,
+          "act": 1.0,
+          "raw_logits": [
+            -3.5185084342956543,
+            -3.346529483795166,
+            -4.3582000732421875,
+            -4.492956161499023,
+            -4.590904712677002
+          ]
+        },
+        "b_noul": {
+          "noul": 0.000627,
+          "confidence": 0.9994,
+          "act": 1.0,
+          "raw_logits": [
+            6.647651672363281,
+            -0.7259125113487244
+          ]
+        },
+        "c_score2": {
+          "probs": {
+            "0": 0.415967,
+            "1": 0.584033
+          },
+          "score": 0.584033,
+          "confidence": 0.0205,
+          "act": 1.0,
+          "raw_logits": [
+            -4.5755615234375,
+            -4.236209869384766
+          ]
+        }
+      },
+      "onnx": {
+        "a_choice5": {
+          "probs": {
+            "o0": 0.299483,
+            "o1": 0.355682,
+            "o2": 0.12933,
+            "o3": 0.113025,
+            "o4": 0.102479
+          },
+          "choice": "o1",
+          "confidence": 0.0847,
+          "act": 1.0,
+          "raw_logits": [
+            -3.5185134410858154,
+            -3.346534252166748,
+            -4.3582048416137695,
+            -4.492959976196289,
+            -4.590909004211426
+          ]
+        },
+        "b_noul": {
+          "noul": 0.000627,
+          "confidence": 0.9994,
+          "act": 1.0,
+          "raw_logits": [
+            6.647646427154541,
+            -0.7259141206741333
+          ]
+        },
+        "c_score2": {
+          "probs": {
+            "0": 0.415968,
+            "1": 0.584032
+          },
+          "score": 0.584032,
+          "confidence": 0.0205,
+          "act": 1.0,
+          "raw_logits": [
+            -4.575563907623291,
+            -4.236217021942139
+          ]
+        }
+      }
+    }
+  ],
+  "overall_pass": true
+}

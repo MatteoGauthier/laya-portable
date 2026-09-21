@@ -16,8 +16,12 @@ from huggingface_hub import snapshot_download
 REVISION = "c5d78730f3493e4fe16d61507ef4b78eef7318cf"
 ap = argparse.ArgumentParser()
 ap.add_argument("--revision", default=REVISION)
-SNAP = snapshot_download("convaiinnovations/laya", revision=ap.parse_known_args()[0].revision, local_files_only=True)
-tok = AutoTokenizer.from_pretrained(f"{SNAP}/tokenizer")
+ap.add_argument("--subfolder", default=None, help="None (english root), multilingual, typed-decisions")
+ap.add_argument("--out", type=Path, default=None, help="Output JSON (default vectors/bpe-fuzz[<.subfolder>].json)")
+ns = ap.parse_known_args()[0]
+SNAP = Path(snapshot_download("convaiinnovations/laya", revision=ns.revision, local_files_only=True))
+TOKDIR = SNAP / ns.subfolder / "tokenizer" if ns.subfolder else SNAP / "tokenizer"
+tok = AutoTokenizer.from_pretrained(str(TOKDIR))
 
 random.seed(42)
 cases = [
@@ -50,5 +54,7 @@ out = []
 for s in cases:
     ids = tok(s, add_special_tokens=False)["input_ids"]
     out.append({"text": s, "ids": ids})
-(ROOT / "packages" / "test-vectors" / "vectors" / "bpe-fuzz.json").write_text(json.dumps(out, ensure_ascii=False) + "\n")
-print(f"wrote {len(out)} cases")
+suffix = f".{ns.subfolder}" if ns.subfolder else ""
+dest = ns.out or (ROOT / "packages" / "test-vectors" / "vectors" / f"bpe-fuzz{suffix}.json")
+dest.write_text(json.dumps(out, ensure_ascii=False) + "\n")
+print(f"wrote {len(out)} cases -> {dest}")

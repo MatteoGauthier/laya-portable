@@ -19,6 +19,9 @@ Shared modules: `laya-feed.ts` (ORT feed builder, single copy),
 `laya-errors.ts` (typed errors), `laya-act-bin.ts` (1.1MB binary head —
 `tools/export/emit_act_bin.py`; falls back to `act_head.json`). Default model is
 `models/laya-split-single.onnx` everywhere (`DEFAULT_MODEL` in `laya.ts`).
+`laya-lang.ts` + `laya-router.ts` (B1) port upstream detection/routing;
+per-checkpoint paths in `laya-paths.ts` (`CHECKPOINT_MODELS/TOKENIZERS/CONFIGS/ACT_BIN/META`).
+Action head infers pooled dim from weights (1024 english/typed, 768 multilingual).
 
 ## Node.js (onnxruntime-node 1.30.0)
 

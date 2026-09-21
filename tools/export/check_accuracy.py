@@ -1,10 +1,17 @@
-"""Weak-label accuracy harness for Laya variants (English root).
+"""Weak-label accuracy harness for Laya variants (per checkpoint).
 
 13 directional checks derived from upstream tests/test_local_e2e.py presets:
 billing intent, phishing triage, guardrails, moderation, support triage, plus
 two anchors from the original example. Each adapter (torch, ONNX variants)
 runs all cases; report includes pass/fail, margins, and key outputs so
 quantization erosion shows before flips do.
+
+--checkpoint selects torch + tokenizer + temperatures + act head
+(english root, multilingual, typed-decisions). --models lists ONNX split
+graphs to gate. Gate: every ONNX adapter must agree with same-checkpoint
+torch on all 13 labels (equivalence); torch absolute score is informational
+(non-english checkpoints are weaker on english cases by design). English
+additionally requires torch 13/13 (legacy CI gate).
 """
 import json
 import math
@@ -70,31 +77,42 @@ def calibrate(agent_cfg, temp, temp_by_opts, logits, k, qt):
     p = np.exp(z - z.max()); p /= p.sum()
     return p
 
+CHECKPOINTS = ("english", "multilingual", "typed-decisions")
+
+def snap_dir(checkpoint, revision=REVISION):
+    from huggingface_hub import snapshot_download
+    base = Path(snapshot_download("convaiinnovations/laya", revision=revision, local_files_only=True))
+    return base if checkpoint == "english" else base / checkpoint
+
+def act_npz(checkpoint):
+    return ROOT / "tools" / "export" / ("act_head.npz" if checkpoint == "english"
+                                        else f"act_head.{checkpoint}.npz")
+
 class TorchAdapter:
     name = "torch-fp32"
-    def __init__(self):
+    def __init__(self, checkpoint="english"):
         import laya
-        from huggingface_hub import snapshot_download
-        mp = snapshot_download("convaiinnovations/laya", revision=REVISION, local_files_only=True)
-        self.agent = laya.load(mp, device="cpu")
+        self.checkpoint = checkpoint
+        mp = snap_dir(checkpoint)
+        self.agent = laya.load(str(mp), device="cpu")
     def predict(self, state, questions):
         return self.agent.predict(state, questions)["answers"]
 
 class SplitOnnxAdapter:
-    def __init__(self, name, model_path):
+    def __init__(self, name, model_path, checkpoint="english"):
         import onnxruntime as ort
-        from huggingface_hub import snapshot_download
         self.name = name
+        self.checkpoint = checkpoint
         self.sess = ort.InferenceSession(str(model_path), providers=["CPUExecutionProvider"])
-        mp = snapshot_download("convaiinnovations/laya", revision=REVISION, local_files_only=True)
-        with open(f"{mp}/rl_agent_config.json") as f:
+        mp = snap_dir(checkpoint)
+        with open(mp / "rl_agent_config.json") as f:
             cfg = json.load(f)
         self.temp, self.temp_by_opts = cfg["temperature"], cfg["temperature_by_options"]
-        ah = np.load(ROOT / "tools" / "export" / "act_head.npz")
+        ah = np.load(act_npz(checkpoint))
         self.W0, self.b0, self.W2, self.b2 = ah["0.weight"], ah["0.bias"], ah["2.weight"], ah["2.bias"]
         sys.path.insert(0, str(ROOT / "upstream" / "laya"))
         import laya as _l
-        self.agent = _l.load(mp, device="cpu")
+        self.agent = _l.load(str(mp), device="cpu")
 
     def predict(self, state, questions):
         from laya.common import build_sequence, collate_items
@@ -159,11 +177,16 @@ def evaluate(answers, check):
 def main():
     import argparse
     ap = argparse.ArgumentParser()
+    ap.add_argument("--checkpoint", default="english", choices=list(CHECKPOINTS))
     ap.add_argument("--models", nargs="*", default=["models/laya-split-single.onnx", "models/laya-split-fp16.onnx"])
-    ap.add_argument("--output", type=Path, default=ROOT / "packages" / "test-vectors" / "reports" / "accuracy-report.json")
+    ap.add_argument("--output", type=Path, default=None)
     args = ap.parse_args()
-    adapters = [TorchAdapter()] + [SplitOnnxAdapter(Path(m).stem.replace("laya-split-", "onnx-").replace("laya-", ""), ROOT / m) for m in args.models]
-    report = {"cases": len(CASES), "adapters": []}
+    ckpt = args.checkpoint
+    if args.output is None:
+        args.output = ROOT / "packages" / "test-vectors" / "reports" / (
+            "accuracy-report.json" if ckpt == "english" else f"accuracy-report-{ckpt}.json")
+    adapters = [TorchAdapter(ckpt)] + [SplitOnnxAdapter(Path(m).stem.replace("laya-split-", "onnx-").replace("laya-", ""), ROOT / m, ckpt) for m in args.models]
+    report = {"checkpoint": ckpt, "cases": len(CASES), "adapters": []}
     for ad in adapters:
         print(f"== {ad.name} ==", flush=True)
         rows, score = [], 0
@@ -178,10 +201,31 @@ def main():
         report["adapters"].append({"name": ad.name, "score": score, "rows": rows})
     args.output.write_text(json.dumps(report, indent=2) + "\n")
     print(f"wrote {args.output}")
-    # Gate: torch baseline must be perfect; quantized variants are informational
-    # (documented as rejected in RELEASE_NOTES) so they don't fail CI.
-    torch_score = next(a["score"] for a in report["adapters"] if a["name"] == "torch-fp32")
-    if torch_score != len(CASES):
+    # Gates: english keeps the legacy torch-13/13 CI gate. Everywhere, ONNX
+    # adapters must agree with same-checkpoint torch on all labels —
+    # quantization erosion must show as documented rejects, not silent flips.
+    by_name = {a["name"]: a for a in report["adapters"]}
+    torch_rows = {r["id"]: r for r in by_name["torch-fp32"]["rows"]}
+    bad = []
+    for name, ad in by_name.items():
+        if name == "torch-fp32":
+            continue
+        for r in ad["rows"]:
+            t = torch_rows[r["id"]]
+            # Gate on decisions, not 4th-decimal rounding: fp16 drift at the
+            # 5th decimal can flip the rounded `got` while pass is unchanged
+            # (known rounding-boundary effect, see check_parity.py). Numeric
+            # `got` erosion is covered by the fp16-parity pdrift numbers.
+            if r["pass"] != t["pass"]:
+                bad.append(f"{name}/{r['id']}: torch pass={t['pass']} got={t['got']} vs onnx pass={r['pass']} got={r['got']}")
+            elif isinstance(r["got"], str) and r["got"] != t["got"]:
+                bad.append(f"{name}/{r['id']}: torch choice={t['got']} vs onnx choice={r['got']}")
+    for b in bad:
+        print(f"EQUIV-FAIL {b}", flush=True)
+    torch_score = by_name["torch-fp32"]["score"]
+    if ckpt == "english" and torch_score != len(CASES):
+        sys.exit(1)
+    if bad:
         sys.exit(1)
 
 if __name__ == "__main__":

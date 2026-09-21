@@ -1,0 +1,51 @@
+{
+  "model": "laya-typed-decisions-split-fp16.onnx",
+  "checkpoint": "typed-decisions",
+  "fixtures": [
+    {
+      "name": "orig-3q",
+      "max_abs_logits_vs_torch": 0.0023283958435058594,
+      "max_abs_pooled_vs_fp32ort": 0.7886962890625,
+      "max_rel_act_vs_torch": 7.741515582893044e-05,
+      "max_calibrated_prob_drift": 0.00030159950256347656,
+      "max_confidence_drift": 0.00014257431030273438,
+      "label_flips": []
+    },
+    {
+      "name": "choice-3",
+      "max_abs_logits_vs_torch": 0.0023288726806640625,
+      "max_abs_pooled_vs_fp32ort": 0.7886962890625,
+      "max_rel_act_vs_torch": 6.764479621779174e-05,
+      "max_calibrated_prob_drift": 0.0001237243413925171,
+      "max_confidence_drift": 0.00010484457015991211,
+      "label_flips": []
+    },
+    {
+      "name": "choice-2",
+      "max_abs_logits_vs_torch": 0.0014069080352783203,
+      "max_abs_pooled_vs_fp32ort": 0.768798828125,
+      "max_rel_act_vs_torch": 3.721237590070814e-05,
+      "max_calibrated_prob_drift": 5.2362680435180664e-05,
+      "max_confidence_drift": 0.00014674663543701172,
+      "label_flips": []
+    },
+    {
+      "name": "choice-6",
+      "max_abs_logits_vs_torch": 0.0017578601837158203,
+      "max_abs_pooled_vs_fp32ort": 0.5067138671875,
+      "max_rel_act_vs_torch": 1.7193735402543098e-05,
+      "max_calibrated_prob_drift": 0.00019305944442749023,
+      "max_confidence_drift": 0.00027483701705932617,
+      "label_flips": []
+    },
+    {
+      "name": "mixed-batch",
+      "max_abs_logits_vs_torch": 0.002860426902770996,
+      "max_abs_pooled_vs_fp32ort": 0.93377685546875,
+      "max_rel_act_vs_torch": 0.0004880058695562184,
+      "max_calibrated_prob_drift": 0.0002834796905517578,
+      "max_confidence_drift": 0.00011551380157470703,
+      "label_flips": []
+    }
+  ]
+}

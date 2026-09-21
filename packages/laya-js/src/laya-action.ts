@@ -1,6 +1,8 @@
 // CPU action head for split-graph: mirrors DecisionModel forward tail exactly.
-// Inputs: logits [B][K] (uncalibrated), markerMask [B][K] bool, pooled [B][1024],
-// weights {w0:[256][1028], b0:[256], w2:[2][256], b2:[2]} (from export/act_head.npz).
+// Inputs: logits [B][K] (uncalibrated), markerMask [B][K] bool, pooled [B][H],
+// weights {w0:[256][H+4], b0:[256], w2:[2][256], b2:[2]} (from export/act_head.npz).
+// H is 1024 for ModernBERT-large checkpoints (english, typed-decisions) and
+// 768 for mmBERT-base (multilingual) — inferred from w0, not hardcoded.
 // Output: act_logits [B][2].
 // GELU is torch.nn.functional.gelu exact (erf); ENT_EPS 1e-9 mirrors Python
 // DecisionModel tail (vs 1e-12 in calibration confidence) — intentional.
@@ -9,6 +11,7 @@ import { LayaInferenceError } from './laya-errors.ts';
 import type { ActHeadWeights } from './laya-types.ts';
 
 export const ACT_ENT_EPS = 1e-9;
+/** Legacy fixed dim for english-only callers; prefer inference from weights. */
 export const POOLED_DIM = 1024;
 const HIDDEN_DIM = 256;
 const FEAT_DIM = 4;
@@ -46,14 +49,18 @@ export function actionLogits(
   }
   const B = logits.length;
   const out: number[][] = [];
+  // Pooled dim varies by backbone (1024 ModernBERT-large, 768 mmBERT-base).
+  const w0cols = w.w0[0]?.length ?? 0;
+  const pooledDim = w0cols - FEAT_DIM;
+  if (pooledDim <= 0) throw new LayaInferenceError(`actionLogits: bad w0 cols ${w0cols}`);
   for (let r = 0; r < B; r++) {
     const row = logits[r];
     const mm = markerMask[r];
     const pooledRow = pooled[r];
     if (!row?.length) throw new LayaInferenceError(`actionLogits: row ${r} needs K>=1`);
     if (mm === undefined) throw new LayaInferenceError(`actionLogits: missing markerMask row ${r}`);
-    if (!pooledRow || pooledRow.length !== POOLED_DIM) {
-      throw new LayaInferenceError(`actionLogits: pooled[${r}] must be ${POOLED_DIM}, got ${pooledRow?.length}`);
+    if (!pooledRow || pooledRow.length !== pooledDim) {
+      throw new LayaInferenceError(`actionLogits: pooled[${r}] must be ${pooledDim}, got ${pooledRow?.length}`);
     }
     const p = softmax(row);
     const kk = Math.max(2, mm.filter(Boolean).length);
@@ -65,7 +72,8 @@ export function actionLogits(
     const top1 = sorted[1] ?? top0;
     const feats = [top0, top0 - top1, ent, kk / 255];
     const inp = [...pooledRow, ...feats];
-    if (inp.length !== POOLED_DIM + FEAT_DIM) throw new LayaInferenceError(`actionLogits: inp ${inp.length} != 1028`);
+    if (inp.length !== pooledDim + FEAT_DIM)
+      throw new LayaInferenceError(`actionLogits: inp ${inp.length} != ${pooledDim + FEAT_DIM}`);
     const h0 = w.b0.map((b, i) => {
       const w0row = w.w0[i];
       if (w0row === undefined) throw new LayaInferenceError(`actionLogits: missing w0 row ${i}`);

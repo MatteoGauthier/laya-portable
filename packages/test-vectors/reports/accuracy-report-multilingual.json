@@ -1,0 +1,426 @@
+{
+  "checkpoint": "multilingual",
+  "cases": 13,
+  "adapters": [
+    {
+      "name": "torch-fp32",
+      "score": 12,
+      "rows": [
+        {
+          "id": "billing-en",
+          "pass": true,
+          "margin": 1.0,
+          "got": "billing"
+        },
+        {
+          "id": "phish-attack",
+          "pass": true,
+          "margin": 0.5,
+          "got": 1.0
+        },
+        {
+          "id": "phish-legit-billing",
+          "pass": false,
+          "margin": 0.4984,
+          "got": 0.9984
+        },
+        {
+          "id": "phish-legit-news",
+          "pass": true,
+          "margin": 0.5,
+          "got": 0.0
+        },
+        {
+          "id": "guard-jailbreak",
+          "pass": true,
+          "margin": 0.4936,
+          "got": 0.9936
+        },
+        {
+          "id": "guard-dan",
+          "pass": true,
+          "margin": 0.4999,
+          "got": 0.9999
+        },
+        {
+          "id": "guard-benign",
+          "pass": true,
+          "margin": 0.1321,
+          "got": 0.3679
+        },
+        {
+          "id": "mod-toxic",
+          "pass": true,
+          "margin": 0.4015,
+          "got": 0.9015
+        },
+        {
+          "id": "mod-benign",
+          "pass": true,
+          "margin": 0.4732,
+          "got": 0.0268
+        },
+        {
+          "id": "mod-spam",
+          "pass": true,
+          "margin": 0.4899,
+          "got": 0.0101
+        },
+        {
+          "id": "triage-intent",
+          "pass": true,
+          "margin": 1.0,
+          "got": "refund"
+        },
+        {
+          "id": "orig-dept",
+          "pass": true,
+          "margin": 1.0,
+          "got": "billing"
+        },
+        {
+          "id": "orig-churn",
+          "pass": true,
+          "margin": 0.4994,
+          "got": 0.0006
+        }
+      ]
+    },
+    {
+      "name": "multilingual-split-single",
+      "score": 12,
+      "rows": [
+        {
+          "id": "billing-en",
+          "pass": true,
+          "margin": 1.0,
+          "got": "billing"
+        },
+        {
+          "id": "phish-attack",
+          "pass": true,
+          "margin": 0.5,
+          "got": 1.0
+        },
+        {
+          "id": "phish-legit-billing",
+          "pass": false,
+          "margin": 0.4984,
+          "got": 0.9984
+        },
+        {
+          "id": "phish-legit-news",
+          "pass": true,
+          "margin": 0.5,
+          "got": 0.0
+        },
+        {
+          "id": "guard-jailbreak",
+          "pass": true,
+          "margin": 0.4936,
+          "got": 0.9936
+        },
+        {
+          "id": "guard-dan",
+          "pass": true,
+          "margin": 0.4999,
+          "got": 0.9999
+        },
+        {
+          "id": "guard-benign",
+          "pass": true,
+          "margin": 0.1321,
+          "got": 0.3679
+        },
+        {
+          "id": "mod-toxic",
+          "pass": true,
+          "margin": 0.4015,
+          "got": 0.9015
+        },
+        {
+          "id": "mod-benign",
+          "pass": true,
+          "margin": 0.4732,
+          "got": 0.0268
+        },
+        {
+          "id": "mod-spam",
+          "pass": true,
+          "margin": 0.4899,
+          "got": 0.0101
+        },
+        {
+          "id": "triage-intent",
+          "pass": true,
+          "margin": 1.0,
+          "got": "refund"
+        },
+        {
+          "id": "orig-dept",
+          "pass": true,
+          "margin": 1.0,
+          "got": "billing"
+        },
+        {
+          "id": "orig-churn",
+          "pass": true,
+          "margin": 0.4994,
+          "got": 0.0006
+        }
+      ]
+    },
+    {
+      "name": "multilingual-split-fp16",
+      "score": 12,
+      "rows": [
+        {
+          "id": "billing-en",
+          "pass": true,
+          "margin": 1.0,
+          "got": "billing"
+        },
+        {
+          "id": "phish-attack",
+          "pass": true,
+          "margin": 0.5,
+          "got": 1.0
+        },
+        {
+          "id": "phish-legit-billing",
+          "pass": false,
+          "margin": 0.4984,
+          "got": 0.9984
+        },
+        {
+          "id": "phish-legit-news",
+          "pass": true,
+          "margin": 0.5,
+          "got": 0.0
+        },
+        {
+          "id": "guard-jailbreak",
+          "pass": true,
+          "margin": 0.4936,
+          "got": 0.9936
+        },
+        {
+          "id": "guard-dan",
+          "pass": true,
+          "margin": 0.4999,
+          "got": 0.9999
+        },
+        {
+          "id": "guard-benign",
+          "pass": true,
+          "margin": 0.1319,
+          "got": 0.3681
+        },
+        {
+          "id": "mod-toxic",
+          "pass": true,
+          "margin": 0.4015,
+          "got": 0.9015
+        },
+        {
+          "id": "mod-benign",
+          "pass": true,
+          "margin": 0.4733,
+          "got": 0.0267
+        },
+        {
+          "id": "mod-spam",
+          "pass": true,
+          "margin": 0.4899,
+          "got": 0.0101
+        },
+        {
+          "id": "triage-intent",
+          "pass": true,
+          "margin": 1.0,
+          "got": "refund"
+        },
+        {
+          "id": "orig-dept",
+          "pass": true,
+          "margin": 1.0,
+          "got": "billing"
+        },
+        {
+          "id": "orig-churn",
+          "pass": true,
+          "margin": 0.4994,
+          "got": 0.0006
+        }
+      ]
+    },
+    {
+      "name": "multilingual-split-int8",
+      "score": 11,
+      "rows": [
+        {
+          "id": "billing-en",
+          "pass": true,
+          "margin": 1.0,
+          "got": "billing"
+        },
+        {
+          "id": "phish-attack",
+          "pass": true,
+          "margin": 0.5,
+          "got": 1.0
+        },
+        {
+          "id": "phish-legit-billing",
+          "pass": false,
+          "margin": 0.2356,
+          "got": 0.7356
+        },
+        {
+          "id": "phish-legit-news",
+          "pass": true,
+          "margin": 0.4994,
+          "got": 0.0006
+        },
+        {
+          "id": "guard-jailbreak",
+          "pass": true,
+          "margin": 0.4905,
+          "got": 0.9905
+        },
+        {
+          "id": "guard-dan",
+          "pass": true,
+          "margin": 0.5,
+          "got": 1.0
+        },
+        {
+          "id": "guard-benign",
+          "pass": false,
+          "margin": 0.2374,
+          "got": 0.7374
+        },
+        {
+          "id": "mod-toxic",
+          "pass": true,
+          "margin": 0.1597,
+          "got": 0.6597
+        },
+        {
+          "id": "mod-benign",
+          "pass": true,
+          "margin": 0.4566,
+          "got": 0.0434
+        },
+        {
+          "id": "mod-spam",
+          "pass": true,
+          "margin": 0.4776,
+          "got": 0.0224
+        },
+        {
+          "id": "triage-intent",
+          "pass": true,
+          "margin": 0.9992,
+          "got": "refund"
+        },
+        {
+          "id": "orig-dept",
+          "pass": true,
+          "margin": 1.0,
+          "got": "billing"
+        },
+        {
+          "id": "orig-churn",
+          "pass": true,
+          "margin": 0.4966,
+          "got": 0.0034
+        }
+      ]
+    },
+    {
+      "name": "multilingual-split-4bit",
+      "score": 12,
+      "rows": [
+        {
+          "id": "billing-en",
+          "pass": true,
+          "margin": 1.0,
+          "got": "billing"
+        },
+        {
+          "id": "phish-attack",
+          "pass": true,
+          "margin": 0.5,
+          "got": 1.0
+        },
+        {
+          "id": "phish-legit-billing",
+          "pass": false,
+          "margin": 0.2132,
+          "got": 0.7132
+        },
+        {
+          "id": "phish-legit-news",
+          "pass": true,
+          "margin": 0.5,
+          "got": 0.0
+        },
+        {
+          "id": "guard-jailbreak",
+          "pass": true,
+          "margin": 0.4947,
+          "got": 0.9947
+        },
+        {
+          "id": "guard-dan",
+          "pass": true,
+          "margin": 0.5,
+          "got": 1.0
+        },
+        {
+          "id": "guard-benign",
+          "pass": true,
+          "margin": 0.3744,
+          "got": 0.1256
+        },
+        {
+          "id": "mod-toxic",
+          "pass": true,
+          "margin": 0.3906,
+          "got": 0.8906
+        },
+        {
+          "id": "mod-benign",
+          "pass": true,
+          "margin": 0.4673,
+          "got": 0.0327
+        },
+        {
+          "id": "mod-spam",
+          "pass": true,
+          "margin": 0.4844,
+          "got": 0.0156
+        },
+        {
+          "id": "triage-intent",
+          "pass": true,
+          "margin": 1.0,
+          "got": "refund"
+        },
+        {
+          "id": "orig-dept",
+          "pass": true,
+          "margin": 1.0,
+          "got": "billing"
+        },
+        {
+          "id": "orig-churn",
+          "pass": true,
+          "margin": 0.4998,
+          "got": 0.0002
+        }
+      ]
+    }
+  ]
+}

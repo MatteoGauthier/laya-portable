@@ -3,7 +3,14 @@
 Action head stays FP32 numpy (same as split validation). Reports raw drift,
 calibrated prob drift, confidence drift, and label flips — not just labels.
 
-Usage: .venv/bin/python export/check_fp16.py [--revision REV]
+Usage:
+  .venv/bin/python tools/export/check_fp16.py [--model ...] [--report ...]
+  .venv/bin/python tools/export/check_fp16.py --subfolder multilingual \\
+      --model models/laya-multilingual-split-fp16.onnx \\
+      --ref32 models/laya-multilingual-split-single.onnx \\
+      --npz tools/export/act_head.multilingual.npz \\
+      --parity-report packages/test-vectors/reports/parity-split-multilingual.json \\
+      --report packages/test-vectors/reports/fp16-parity-multilingual.json
 """
 import argparse
 import json, sys
@@ -16,8 +23,12 @@ REPORTS = VECTORS.parent / "reports"
 sys.path.insert(0, str(ROOT / "upstream" / "laya"))
 import onnxruntime as ort
 
-ah = np.load(ROOT / "tools" / "export" / "act_head.npz")
-W0, b0, W2, b2 = (ah["0.weight"], ah["0.bias"], ah["2.weight"], ah["2.bias"])
+REVISION = "c5d78730f3493e4fe16d61507ef4b78eef7318cf"
+FIXTURE_NAMES = ["orig-3q", "choice-3", "choice-2", "choice-6", "mixed-batch"]
+
+def load_head(npz_path):
+    ah = np.load(npz_path)
+    return (ah["0.weight"], ah["0.bias"], ah["2.weight"], ah["2.bias"])
 
 def cpu_act(logits64, mm, pooled32):
     p = np.exp(logits64 - logits64.max(axis=1, keepdims=True))
@@ -41,18 +52,31 @@ def conf_entropy(p, k):
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--revision", default="c5d78730f3493e4fe16d61507ef4b78eef7318cf")
+ap.add_argument("--repo", default="convaiinnovations/laya")
+ap.add_argument("--subfolder", default=None, help="None (english root), multilingual, typed-decisions")
 ap.add_argument("--model", type=Path, default=ROOT / "models" / "laya-split-fp16.onnx")
+ap.add_argument("--ref32", type=Path, default=None, help="FP32 split reference (default: english single)")
+ap.add_argument("--npz", type=Path, default=None, help="Act-head weights (default: english act_head.npz)")
+ap.add_argument("--parity-report", type=Path, default=None, help="Qtypes source (default: english parity-report)")
 ap.add_argument("--report", type=Path, default=REPORTS / "fp16-parity.json")
 args, _ = ap.parse_known_args()
+ckpt = args.subfolder or "english"
+suffix = "" if ckpt == "english" else f".{ckpt}"
+ref32 = args.ref32 or (ROOT / "models" / "laya-split-single.onnx")
+npz = args.npz or (ROOT / "tools" / "export" / "act_head.npz")
+parity_report = args.parity_report or (REPORTS / "parity-report.json")
+W0, b0, W2, b2 = load_head(npz)
+print(f"act head w0 {list(W0.shape)} checkpoint={ckpt}", flush=True)
 sess16 = ort.InferenceSession(str(args.model), providers=["CPUExecutionProvider"])
-sess32 = ort.InferenceSession(str(ROOT / "models" / "laya-split-single.onnx"), providers=["CPUExecutionProvider"])
+sess32 = ort.InferenceSession(str(ref32), providers=["CPUExecutionProvider"])
 import os
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 from huggingface_hub import snapshot_download
-snap = snapshot_download("convaiinnovations/laya", revision=args.revision, local_files_only=True)
-rep = {"model": Path(args.model).name, "fixtures": []}
-for name in ["orig-3q", "choice-3", "choice-2", "choice-6", "mixed-batch"]:
-    d = np.load(VECTORS / f"{name}.npz")
+snap = Path(snapshot_download(args.repo, revision=args.revision, local_files_only=True))
+snap = snap / args.subfolder if args.subfolder else snap
+rep = {"model": Path(args.model).name, "checkpoint": ckpt, "fixtures": []}
+for name in FIXTURE_NAMES:
+    d = np.load(VECTORS / f"{name}{suffix}.npz")
     feeds = {k: d[k] for k in ["input_ids", "attention_mask", "marker_pos", "marker_mask", "qtype"]}
     lo16, po16 = sess16.run(None, feeds)
     lo32, po32 = sess32.run(None, feeds)
@@ -66,7 +90,7 @@ for name in ["orig-3q", "choice-3", "choice-2", "choice-6", "mixed-batch"]:
     # calibrated drift vs torch (temperature from checkpoint config)
     import json as js
     cfg = js.load(open(Path(snap) / "rl_agent_config.json"))
-    fx = [f for f in js.load(open(REPORTS / "parity-report.json"))["fixtures"] if f["name"] == name][0]
+    fx = [f for f in js.load(open(parity_report))["fixtures"] if f["name"] == name][0]
     from laya.common import QTYPES, temp_bucket
     qtypes = fx["qtypes"]
     qnames = ["choice", "score", "noul"]

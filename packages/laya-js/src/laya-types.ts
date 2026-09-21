@@ -114,6 +114,9 @@ export interface TokenizerJson {
   model: {
     vocab: Record<string, number>;
     merges: [string, string][];
+    byte_fallback?: boolean;
+    fuse_unk?: boolean;
+    unk_token?: string | null;
   };
   added_tokens: {
     content: string;
@@ -121,6 +124,16 @@ export interface TokenizerJson {
     lstrip?: boolean;
     rstrip?: boolean;
   }[];
+  pre_tokenizer?: {
+    type: string;
+    replacement?: string;
+    prepend_scheme?: string;
+  };
+  normalizer?: {
+    type: string;
+    pattern?: { String?: string };
+    content?: string;
+  };
 }
 
 /** Worker ↔ main-thread protocol (playground). */

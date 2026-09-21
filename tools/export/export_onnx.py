@@ -33,6 +33,10 @@ class Wrapper(nn.Module):
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--model", help="Local checkpoint dir; default pinned HF cache")
+    ap.add_argument("--repo", default="convaiinnovations/laya", help="HF repo (bundle holds all three)")
+    ap.add_argument("--revision", default=REVISION, help="Pinned revision")
+    ap.add_argument("--subfolder", default=None, help="Checkpoint subfolder: None (english root), multilingual, typed-decisions")
+    ap.add_argument("--vocab-size", type=int, default=50000, help="Dummy input_ids range (use 256000 for multilingual)")
     ap.add_argument("--output", type=Path, default=ROOT/"models"/"laya-faithful.onnx")
     ap.add_argument("--opset", type=int, default=18)
     ap.add_argument("--dummy-batch", type=int, default=2)
@@ -42,7 +46,11 @@ def main():
 
     import laya
     from huggingface_hub import snapshot_download
-    model_path = args.model or snapshot_download("convaiinnovations/laya", revision=REVISION, local_files_only=True)
+    if args.model:
+        model_path = args.model
+    else:
+        base = snapshot_download(args.repo, revision=args.revision, local_files_only=True)
+        model_path = str(Path(base) / args.subfolder) if args.subfolder else base
     print(f"loading {model_path} on cpu ...", flush=True)
     agent = laya.load(model_path, device="cpu")
     assert str(agent.device) == "cpu", agent.device
@@ -52,7 +60,7 @@ def main():
     wrapper = Wrapper(model).eval()
     B, S, K = args.dummy_batch, args.dummy_seq, args.dummy_options
     assert K >= 2, "forward uses topk(2); K>=2 required"
-    input_ids = torch.randint(0, 50000, (B, S), dtype=torch.long)
+    input_ids = torch.randint(0, args.vocab_size, (B, S), dtype=torch.long)
     attention_mask = torch.ones((B, S), dtype=torch.long)
     attention_mask[1, S*3//4:] = 0
     marker_pos = torch.tensor([[5, 10, 15][:K], [6, 12, 0][:K]], dtype=torch.long)
@@ -98,8 +106,9 @@ def main():
         print(f"external data: {data_file.stat().st_size/1e6:.1f} MB", flush=True)
 
     meta = {
-        "model_id": "convaiinnovations/laya",
-        "model_revision": REVISION if not args.model else None,
+        "model_id": args.repo if not args.model else args.model,
+        "model_revision": args.revision if not args.model else None,
+        "subfolder": args.subfolder,
         "model_path": str(Path(model_path).name) if not args.model else str(model_path),
         "source_commit": subprocess.check_output(["git", "-C", str(ROOT/"upstream"/"laya"), "rev-parse", "HEAD"], text=True).strip(),
         "versions": {n: importlib.metadata.version(n) for n in ["torch", "transformers", "onnx", "onnxscript", "numpy"]},

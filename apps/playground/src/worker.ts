@@ -24,13 +24,57 @@ import tokenizerUrl from '@laya/js/src/tokenizer/tokenizer.json?url';
 import configUrl from '@laya/js/src/tokenizer/rl_agent_config.json?url';
 import actBinUrl from '@laya/test-vectors/vectors/act_head.bin?url';
 import actMetaUrl from '@laya/test-vectors/vectors/act_head.meta.json?url';
+import { route, type CheckpointName } from '@laya/js/laya-router.ts';
+
+type CheckpointSel = 'auto' | CheckpointName;
+
+// Base URL for gitignored weight/asset files. Local dev serves repo models/
+// at /models via vite.config.ts; hosted builds point at R2:
+//   VITE_MODELS_BASE_URL=https://pub-<hash>.r2.dev npm run build
+const MODELS_BASE = (import.meta.env.VITE_MODELS_BASE_URL as string | undefined) ?? '/models';
+
+const MODEL_URLS: Record<CheckpointName, { fp32: string; fp16: string | null }> = {
+  english: {
+    fp32: `${MODELS_BASE}/laya-split-single.onnx`,
+    fp16: `${MODELS_BASE}/laya-split-fp16.onnx`,
+  },
+  multilingual: { fp32: `${MODELS_BASE}/laya-multilingual-split-single.onnx`, fp16: null },
+  'typed-decisions': { fp32: `${MODELS_BASE}/laya-typed-decisions-split-single.onnx`, fp16: null },
+};
+
+const TOKENIZER_URLS: Record<CheckpointName, string> = {
+  english: tokenizerUrl,
+  multilingual: `${MODELS_BASE}/laya-multilingual.tokenizer.json`,
+  'typed-decisions': `${MODELS_BASE}/laya-typed-decisions.tokenizer.json`,
+};
+
+const CONFIG_URLS: Record<CheckpointName, string> = {
+  english: configUrl,
+  multilingual: `${MODELS_BASE}/laya-multilingual.rl_agent_config.json`,
+  'typed-decisions': `${MODELS_BASE}/laya-typed-decisions.rl_agent_config.json`,
+};
+
+const ACT_BIN_URLS: Record<CheckpointName, string> = {
+  english: actBinUrl,
+  multilingual: `${MODELS_BASE}/laya-multilingual.act_head.bin`,
+  'typed-decisions': `${MODELS_BASE}/laya-typed-decisions.act_head.bin`,
+};
+
+const ACT_META_URLS: Record<CheckpointName, string> = {
+  english: actMetaUrl,
+  multilingual: `${MODELS_BASE}/laya-multilingual.act_head.meta.json`,
+  'typed-decisions': `${MODELS_BASE}/laya-typed-decisions.act_head.meta.json`,
+};
 
 let tok: Tokenizer | null = null;
 let sess: ort.InferenceSession | null = null;
 let actW: ActHeadWeights | null = null;
 let temp: TemperatureConfig | null = null;
+let maxLen = 512;
+let headMaxLen = 192;
 let readyBackend: string | null = null;
 let readyModel: string | null = null;
+let readyCheckpoint: CheckpointName | null = null;
 
 const workerSelf = self as unknown as {
   postMessage(m: WorkerResponse): void;
@@ -65,7 +109,7 @@ async function fetchWithProgress(url: string, onPct: (pct: number) => void): Pro
   return bytes.subarray(0, off);
 }
 
-const ASSET_CACHE = 'laya-assets-v1';
+const ASSET_CACHE = 'laya-assets-v2';
 
 // Cache-first for immutable versioned assets (tokenizer, config, act head,
 // models). First visit streams with progress and populates the cache;
@@ -98,26 +142,55 @@ async function cachedBytes(url: string, onPct: (pct: number) => void): Promise<U
 workerSelf.onmessage = (e: MessageEvent<WorkerRequest>) => {
   void (async () => {
     const { state, questions, backend = 'auto', precision = 'fp32' } = e.data;
-    const modelUrl = precision === 'fp16' ? '/models/laya-split-fp16.onnx' : '/models/laya-split-single.onnx';
-    const modelTag = precision === 'fp16' ? 'fp16' : 'fp32';
+    const sel = (e.data.checkpoint ?? e.data.model ?? 'auto') as CheckpointSel;
+    const langHint = e.data.lang;
+    // B1 routing: pure JS detection, no model load. Explicit checkpoint pins,
+    // 'auto' follows Python precedence (non-Latin -> multilingual).
+    const decision =
+      sel === 'auto'
+        ? route(state, questions, langHint ? { lang: langHint } : {})
+        : route(state, questions, { model: sel });
+    const checkpoint = decision.model;
+    const urls = MODEL_URLS[checkpoint];
+    const modelUrl = precision === 'fp16' ? (urls.fp16 ?? urls.fp32) : urls.fp32;
+    const modelTag = `${checkpoint}-${precision === 'fp16' && urls.fp16 ? 'fp16' : 'fp32'}`;
     try {
       const t0 = performance.now();
       // Setup-phase marks for the waterfall (0 when served from cache/session).
       let downloadMs = 0;
       let sessionMs = 0;
-      if (!tok) {
-        post({ type: 'progress', stage: 'tokenizer' });
+      if (!tok || readyCheckpoint !== checkpoint) {
+        // Checkpoint switch: drop tokenizer/session/weights (LRU size 1 in worker).
+        tok = null;
+        temp = null;
+        actW = null;
+        if (sess) {
+          try {
+            await sess.release?.();
+          } catch {
+            /* ignore */
+          }
+          sess = null;
+        }
+        readyCheckpoint = checkpoint;
+        post({ type: 'progress', stage: `tokenizer-${checkpoint}` });
         // Parallelize tokenizer + config (was sequential); cached after first visit.
         const noop = (_pct: number): void => undefined;
-        const [tjBytes, cfgBytes] = await Promise.all([cachedBytes(tokenizerUrl, noop), cachedBytes(configUrl, noop)]);
+        const [tjBytes, cfgBytes] = await Promise.all([
+          cachedBytes(TOKENIZER_URLS[checkpoint], noop),
+          cachedBytes(CONFIG_URLS[checkpoint], noop),
+        ]);
         const tj = JSON.parse(new TextDecoder().decode(tjBytes)) as TokenizerJson;
         const cfg = JSON.parse(new TextDecoder().decode(cfgBytes)) as {
           temperature: number[];
           temperature_by_options: Record<string, number>;
+          max_len?: number;
+          head_max_len?: number;
         };
         tok = loadBpeTokenizer(tj);
-        const cfgT = cfg;
-        temp = { temperature: cfgT.temperature, temperature_by_options: cfgT.temperature_by_options };
+        temp = { temperature: cfg.temperature, temperature_by_options: cfg.temperature_by_options };
+        maxLen = cfg.max_len ?? 512;
+        headMaxLen = cfg.head_max_len ?? 192;
       }
       const tokenizer = tok;
       const temps = temp;
@@ -174,8 +247,8 @@ workerSelf.onmessage = (e: MessageEvent<WorkerRequest>) => {
         // Binary act head (1.1MB) over JSON (5.2MB); cached after first visit.
         const noopAct = (_pct: number): void => undefined;
         const [binBytes, metaBytes] = await Promise.all([
-          cachedBytes(actBinUrl, noopAct),
-          cachedBytes(actMetaUrl, noopAct),
+          cachedBytes(ACT_BIN_URLS[checkpoint], noopAct),
+          cachedBytes(ACT_META_URLS[checkpoint], noopAct),
         ]);
         actW = parseActHeadBin(binBytes, JSON.parse(new TextDecoder().decode(metaBytes)) as ActHeadMeta);
         sessionMs = performance.now() - tSess;
@@ -191,7 +264,7 @@ workerSelf.onmessage = (e: MessageEvent<WorkerRequest>) => {
         const qdef = questions[qid];
         if (qdef === undefined) throw new Error(`missing question ${qid}`);
         const q = toInternal(qdef);
-        const { ids: seq, markers } = buildSequence(tokenizer, state, q, 512, 192);
+        const { ids: seq, markers } = buildSequence(tokenizer, state, q, maxLen, headMaxLen);
         return { ids: seq, markers, qtype: QTYPES[q.t] };
       });
       const b: CollatedBatch = collateItems([items], tokenizer.padId);
@@ -237,6 +310,7 @@ workerSelf.onmessage = (e: MessageEvent<WorkerRequest>) => {
         model: readyModel ?? modelTag,
         seqLen: d.dims.S,
         kmax: d.dims.K,
+        routing: { model: decision.model, reason: decision.reason },
       });
     } catch (err) {
       post({ type: 'error', message: String((err as Error)?.message ?? err).slice(0, 500) });

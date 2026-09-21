@@ -1,0 +1,51 @@
+{
+  "model": "laya-multilingual-split-fp16.onnx",
+  "checkpoint": "multilingual",
+  "fixtures": [
+    {
+      "name": "orig-3q",
+      "max_abs_logits_vs_torch": 0.06804847717285156,
+      "max_abs_pooled_vs_fp32ort": 0.412872314453125,
+      "max_rel_act_vs_torch": 0.0007051600841805339,
+      "max_calibrated_prob_drift": 8.761882781982422e-05,
+      "max_confidence_drift": 0.00021946430206298828,
+      "label_flips": []
+    },
+    {
+      "name": "choice-3",
+      "max_abs_logits_vs_torch": 0.08831119537353516,
+      "max_abs_pooled_vs_fp32ort": 0.162628173828125,
+      "max_rel_act_vs_torch": 0.0001661165151745081,
+      "max_calibrated_prob_drift": 5.960464477539062e-07,
+      "max_confidence_drift": 5.9604644775390625e-06,
+      "label_flips": []
+    },
+    {
+      "name": "choice-2",
+      "max_abs_logits_vs_torch": 0.019693374633789062,
+      "max_abs_pooled_vs_fp32ort": 0.22491455078125,
+      "max_rel_act_vs_torch": 0.00016478511679451913,
+      "max_calibrated_prob_drift": 1.1920928955078125e-07,
+      "max_confidence_drift": 1.4901161193847656e-06,
+      "label_flips": []
+    },
+    {
+      "name": "choice-6",
+      "max_abs_logits_vs_torch": 0.0006399154663085938,
+      "max_abs_pooled_vs_fp32ort": 0.24530029296875,
+      "max_rel_act_vs_torch": 0.0005180251318961382,
+      "max_calibrated_prob_drift": 0.00010985136032104492,
+      "max_confidence_drift": 4.5299530029296875e-06,
+      "label_flips": []
+    },
+    {
+      "name": "mixed-batch",
+      "max_abs_logits_vs_torch": 0.006407976150512695,
+      "max_abs_pooled_vs_fp32ort": 0.412872314453125,
+      "max_rel_act_vs_torch": 0.0007215667865239084,
+      "max_calibrated_prob_drift": 0.0015291273593902588,
+      "max_confidence_drift": 0.0007554888725280762,
+      "label_flips": []
+    }
+  ]
+}

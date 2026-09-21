@@ -7,9 +7,11 @@ import type { Questions, WorkerResponse } from '@laya/js/laya-types.ts';
 
 export type Backend = 'auto' | 'webgpu' | 'wasm';
 export type Precision = 'fp32' | 'fp16';
+export type Checkpoint = 'auto' | 'english' | 'multilingual' | 'typed-decisions';
 
 export function stageLabel(s: string): string {
   if (s === 'tokenizer') return 'Tokenizer loaded';
+  if (s.startsWith('tokenizer-')) return `Tokenizer loaded (${s.slice('tokenizer-'.length)})`;
   if (s.startsWith('model-')) return `Model fetched (${s.slice('model-'.length)})`;
   if (s.startsWith('backend-')) return `Backend ready (${s.slice('backend-'.length)})`;
   if (s === 'tokenize') return 'Tokenized input';
@@ -18,7 +20,7 @@ export function stageLabel(s: string): string {
 }
 
 export function isSetupStage(s: string): boolean {
-  return s === 'tokenizer' || s.startsWith('model-') || s.startsWith('backend-');
+  return s === 'tokenizer' || s.startsWith('tokenizer-') || s.startsWith('model-') || s.startsWith('backend-');
 }
 
 export function compactJson(text: string): string {
@@ -42,14 +44,20 @@ export function cliSnippet(stateText: string, qText: string, precision: Precisio
   return `node bin/cli.ts${fp} --state '${compactJson(stateText)}' --questions '${compactJson(qText)}'\n`;
 }
 
-export function browserSnippet(stateText: string, qText: string, backend: Backend, precision: Precision): string {
+export function browserSnippet(
+  stateText: string,
+  qText: string,
+  backend: Backend,
+  precision: Precision,
+  checkpoint: Checkpoint = 'auto',
+): string {
   return [
     "const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });",
     'worker.onmessage = (e) => {',
-    "  if (e.data.type === 'done') console.log(e.data.result.answers, e.data.timings);",
+    "  if (e.data.type === 'done') console.log(e.data.result.answers, e.data.timings, e.data.routing);",
     "  if (e.data.type === 'error') console.error(e.data.message);",
     '};',
-    `worker.postMessage({ state: ${compactJson(stateText)}, questions: ${compactJson(qText)}, backend: '${backend}', precision: '${precision}' });`,
+    `worker.postMessage({ state: ${compactJson(stateText)}, questions: ${compactJson(qText)}, backend: '${backend}', precision: '${precision}', checkpoint: '${checkpoint}' });`,
     '',
   ].join('\n');
 }
@@ -63,6 +71,7 @@ export function PlaygroundTab(): React.JSX.Element {
   const [qText, setQText] = useState(JSON.stringify(initial.questions, null, 1));
   const [backend, setBackend] = useState<Backend>('auto');
   const [precision, setPrecision] = useState<Precision>('fp32');
+  const [checkpoint, setCheckpoint] = useState<Checkpoint>('auto');
   const [status, setStatus] = useState('idle');
   const [log, setLog] = useState<string[]>([]);
   const [pct, setPct] = useState<number | null>(null);
@@ -125,7 +134,7 @@ export function PlaygroundTab(): React.JSX.Element {
       setLog([]);
       setStatus('starting');
       setPct(null);
-      worker.postMessage({ state, questions, backend, precision });
+      worker.postMessage({ state, questions, backend, precision, checkpoint });
     } catch (err) {
       setStatus(`invalid JSON: ${err instanceof Error ? err.message : String(err)}`);
     }
@@ -156,6 +165,18 @@ export function PlaygroundTab(): React.JSX.Element {
           >
             <option value="fp32">fp32 (1.6GB)</option>
             <option value="fp16">fp16 (806MB)</option>
+          </select>
+          <label htmlFor="checkpoint">Checkpoint</label>
+          <select
+            id="checkpoint"
+            value={checkpoint}
+            onChange={(e) => setCheckpoint(e.target.value as Checkpoint)}
+            title="auto runs JS routing (non-Latin → multilingual); explicit pins a checkpoint. Multilingual/typed need B2 export artifacts in /models."
+          >
+            <option value="auto">auto (router)</option>
+            <option value="english">english</option>
+            <option value="multilingual">multilingual</option>
+            <option value="typed-decisions">typed-decisions</option>
           </select>
           <button onClick={run}>Run</button>
           <Heartbeat />
@@ -214,6 +235,12 @@ export function PlaygroundTab(): React.JSX.Element {
             <div className="meta">
               backend {result.backend} · {result.model} · seq {result.seqLen} · K {result.kmax} · tokens{' '}
               {result.result.usage.input_tokens}
+              {result.routing && (
+                <>
+                  {' · routed '}
+                  <b>{result.routing.model}</b> ({result.routing.reason})
+                </>
+              )}
             </div>
             <Waterfall timings={result.timings} setup={result.setup} />
             <div className="row" aria-label="Copy this run as code">
@@ -224,7 +251,9 @@ export function PlaygroundTab(): React.JSX.Element {
                 {copied === 'cli' ? 'Copied ✓' : 'Copy as CLI'}
               </button>
               <button
-                onClick={() => copySnippet('browser', () => browserSnippet(stateText, qText, backend, precision))}
+                onClick={() =>
+                  copySnippet('browser', () => browserSnippet(stateText, qText, backend, precision, checkpoint))
+                }
               >
                 {copied === 'browser' ? 'Copied ✓' : 'Copy as browser'}
               </button>

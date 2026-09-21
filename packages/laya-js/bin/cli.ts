@@ -10,12 +10,17 @@ import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { LayaClient, DEFAULT_MODEL } from '../src/laya.ts';
-import { MODELS_DIR } from '../src/laya-paths.ts';
+import { CHECKPOINT_CONFIGS, CHECKPOINT_MODELS, CHECKPOINT_TOKENIZERS, MODELS_DIR } from '../src/laya-paths.ts';
+import { Router } from '../src/laya-router.ts';
 import type { Questions } from '../src/laya-types.ts';
 
 const { values } = parseArgs({
   options: {
     model: { type: 'string' },
+    checkpoint: { type: 'string' },
+    route: { type: 'boolean', default: false },
+    lang: { type: 'string' },
+    task: { type: 'string' },
     fp16: { type: 'boolean', default: false },
     state: { type: 'string' },
     'state-file': { type: 'string' },
@@ -30,9 +35,12 @@ const { values } = parseArgs({
 if (values.help) {
   console.log(`laya — calibrated ONNX decisions
 Usage:
-  node bin/cli.ts [--model path.onnx | --fp16] [--state JSON] [--questions JSON]
+  node bin/cli.ts [--model path.onnx | --fp16] [--checkpoint english|multilingual|typed-decisions]
+               [--route] [--lang hi] [--task typed_decisions]
+               [--state JSON] [--questions JSON]
                [--state-file f] [--questions-file f] [--json]
-Defaults to ${DEFAULT_MODEL}`);
+Defaults to ${DEFAULT_MODEL};
+--route auto-selects --checkpoint via the JS Router (B1), default english until B2 artifacts exist.`);
   process.exit(0);
 }
 
@@ -72,22 +80,36 @@ function fail(op: string, err: unknown): never {
   throw err;
 }
 
-const model = values.model ?? join(MODELS_DIR, values.fp16 ? 'laya-split-fp16.onnx' : 'laya-split-single.onnx');
+const checkpoint = values.checkpoint as 'english' | 'multilingual' | 'typed-decisions' | undefined;
+const model =
+  values.model ??
+  (checkpoint
+    ? CHECKPOINT_MODELS[checkpoint]
+    : join(MODELS_DIR, values.fp16 ? 'laya-split-fp16.onnx' : 'laya-split-single.onnx'));
+const tokenizer = checkpoint ? CHECKPOINT_TOKENIZERS[checkpoint] : undefined;
+const config = checkpoint ? CHECKPOINT_CONFIGS[checkpoint] : undefined;
+
+const state = load(values.state, values['state-file'], DEFAULT_STATE, 'state');
+const questions = load(values.questions, values['questions-file'], DEFAULT_QUESTIONS, 'questions') as Questions;
+
+if (values.route) {
+  const router = new Router();
+  const decision = router.routeDecision(state, questions, { lang: values.lang, task: values.task });
+  console.error(`route: ${decision.model} (${decision.reason})`);
+  await router.unload();
+}
 
 let laya: LayaClient;
 try {
   const t0 = performance.now();
-  laya = await LayaClient.open({ model });
+  laya = await LayaClient.open({ model, ...(tokenizer ? { tokenizer } : {}), ...(config ? { config } : {}) });
   console.error(`loaded in ${((performance.now() - t0) / 1000).toFixed(1)}s: ${basename(model)}`);
 } catch (err) {
   fail('open', err);
 }
 
 try {
-  const result = await laya.predict(
-    load(values.state, values['state-file'], DEFAULT_STATE, 'state'),
-    load(values.questions, values['questions-file'], DEFAULT_QUESTIONS, 'questions') as Questions,
-  );
+  const result = await laya.predict(state, questions);
   console.log(JSON.stringify(result, null, values.json ? 0 : 1));
 } catch (err) {
   fail('predict', err);
