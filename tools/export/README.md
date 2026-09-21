@@ -163,10 +163,10 @@ with calibration data is the deeper follow-up, gated by this harness.
 `check_split_parity.py` gates what ships (torch full vs split ONNX + numpy
 head, same 5 fixtures and 1e-4 thresholds as `check_parity.py`):
 
-| Checkpoint | Logits drift | Calibrated pdrift | Labels | Report |
-| ---------- | -----------: | ----------------: | ------ | ------ |
-| multilingual (768-dim pooled) | ≤2.38e-05 | ≤1e-06 | 5/5 OK | `parity-split-multilingual.json` |
-| typed-decisions (1024-dim pooled) | ≤7.27e-06 | ≤1e-06 | 5/5 OK | `parity-split-typed-decisions.json` |
+| Checkpoint                        | Logits drift | Calibrated pdrift | Labels | Report                              |
+| --------------------------------- | -----------: | ----------------: | ------ | ----------------------------------- |
+| multilingual (768-dim pooled)     |    ≤2.38e-05 |            ≤1e-06 | 5/5 OK | `parity-split-multilingual.json`    |
+| typed-decisions (1024-dim pooled) |    ≤7.27e-06 |            ≤1e-06 | 5/5 OK | `parity-split-typed-decisions.json` |
 
 Pure-JS BPE covers all three tokenizers (206/206 fuzz each):
 english + typed-decisions share the ByteLevel loader; multilingual uses the
@@ -179,10 +179,10 @@ never match post-normalizer text (raw spaces aren't ▁ until normalized).
 
 FP16 (`check_fp16.py --subfolder …`, per-checkpoint fixtures/temperatures):
 
-| Checkpoint | dlogits | pdrift | Flips | Verdict |
-| ---------- | ------: | -----: | ----- | ------- |
-| multilingual (616MB) | ≤8.83e-02 | ≤1.53e-03 | none | ✅ CPU/WASM only, looser bound documented |
-| typed-decisions (0.85GB) | ≤2.86e-03 | ≤3.02e-04 | none | ✅ CPU/WASM only, inside english bar |
+| Checkpoint               |   dlogits |    pdrift | Flips | Verdict                                   |
+| ------------------------ | --------: | --------: | ----- | ----------------------------------------- |
+| multilingual (616MB)     | ≤8.83e-02 | ≤1.53e-03 | none  | ✅ CPU/WASM only, looser bound documented |
+| typed-decisions (0.85GB) | ≤2.86e-03 | ≤3.02e-04 | none  | ✅ CPU/WASM only, inside english bar      |
 
 Pooled drift looks large in absolute terms (≤0.41 multilingual, ≤0.93 typed)
 but pooled feeds only the saturated action head (relative act drift ≤7.3e-04)
@@ -192,10 +192,10 @@ multilingual variant was attempted to tighten logits; result pending.
 Accuracy harness (`check_accuracy.py --checkpoint …`, gate = ONNX must match
 same-checkpoint torch decisions on all 13; torch absolute informational):
 
-| Checkpoint | torch | fp32 | fp16 | int8 | 4-bit |
-| ---------- | ----: | ---: | ---: | ---: | ----: |
-| multilingual | 12/13 | 12/13 =torch | 12/13 =torch | 11/13 ⛔ guard-benign flip | 12/13 =torch ⚠️ CPU-only |
-| typed-decisions | 13/13 | 13/13 | 13/13 | 13/13 ⚠️ unshipped | 13/13 ⚠️ CPU-only |
+| Checkpoint      | torch |         fp32 |         fp16 |                       int8 |                    4-bit |
+| --------------- | ----: | -----------: | -----------: | -------------------------: | -----------------------: |
+| multilingual    | 12/13 | 12/13 =torch | 12/13 =torch | 11/13 ⛔ guard-benign flip | 12/13 =torch ⚠️ CPU-only |
+| typed-decisions | 13/13 |        13/13 |        13/13 |         13/13 ⚠️ unshipped |        13/13 ⚠️ CPU-only |
 
 Notes: multilingual torch itself false-positives one legit-billing email
 (0.9984 phishing) — script/language routing, not confidence gating, is the

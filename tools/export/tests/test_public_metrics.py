@@ -1,5 +1,8 @@
 import sys
 from pathlib import Path
+import pytest
+
+pytest.importorskip("numpy")
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from bench_public import ece

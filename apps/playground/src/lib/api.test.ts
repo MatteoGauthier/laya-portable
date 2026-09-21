@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import React from 'react';
 import { fetchJson } from './api.ts';
 import { PRESETS } from './presets.ts';
 

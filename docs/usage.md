@@ -108,7 +108,7 @@ worker.postMessage({ state, questions, backend: 'auto', precision: 'fp32', check
   `/models` in dev with `Content-Length` + `Accept-Ranges`.
 - Result `timings` has the same four phases as Node; the UI shows
   `tok · infer · post · total` per run, plus `setup { download_ms,
-  session_ms }` (0 download when cache-hit) and the routing decision.
+session_ms }` (0 download when cache-hit) and the routing decision.
 
 ### A1 CDN prep (owner: you)
 

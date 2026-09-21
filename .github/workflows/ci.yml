@@ -61,7 +61,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - run: pip install pytest
+      - run: pip install pytest numpy
       # testpaths lives in pyproject.toml (tools/export/tests); no tests/ dir.
       - run: python -m pytest -q
 

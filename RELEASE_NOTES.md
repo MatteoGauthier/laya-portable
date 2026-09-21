@@ -29,16 +29,16 @@ with per-checkpoint parity, BPE, FP16, and accuracy gates (see `export/README.md
 
 B2 checkpoints (same contract, per-checkpoint tokenizer/config/act-head):
 
-| Artifact                                    |   Size | Status                                              |
-| ------------------------------------------- | -----: | --------------------------------------------------- |
-| `laya-multilingual-split-single.onnx`       | 1.2 GB | ✅ CPU (parity ≤2.4e-05, 12/13 == torch, no flips) |
-| `laya-multilingual-split-fp16.onnx`         | 616 MB | ✅ CPU/WASM only (pdrift ≤1.6e-03, no flips)       |
-| `laya-multilingual-split-int8.onnx`         | 0.32GB | ⛔ guard-benign flip (True→False)                   |
-| `laya-multilingual-split-4bit.onnx`         | 0.86GB | ⚠️ CPU 12/13 == torch; WebGPU untested             |
-| `laya-typed-decisions-split-single.onnx`    | 1.6 GB | ✅ CPU (parity ≤7.3e-06, 13/13 == torch)           |
-| `laya-typed-decisions-split-fp16.onnx`      | 0.85GB | ✅ CPU/WASM only (pdrift ≤3.1e-04, no flips)       |
-| `laya-typed-decisions-split-int8.onnx`      | 0.42GB | ⚠️ CPU 13/13, ~14% faster on 1 probe — unshipped  |
-| `laya-typed-decisions-split-4bit.onnx`      | 0.41GB | ⚠️ CPU 13/13; WebGPU untested                      |
+| Artifact                                 |   Size | Status                                             |
+| ---------------------------------------- | -----: | -------------------------------------------------- |
+| `laya-multilingual-split-single.onnx`    | 1.2 GB | ✅ CPU (parity ≤2.4e-05, 12/13 == torch, no flips) |
+| `laya-multilingual-split-fp16.onnx`      | 616 MB | ✅ CPU/WASM only (pdrift ≤1.6e-03, no flips)       |
+| `laya-multilingual-split-int8.onnx`      | 0.32GB | ⛔ guard-benign flip (True→False)                  |
+| `laya-multilingual-split-4bit.onnx`      | 0.86GB | ⚠️ CPU 12/13 == torch; WebGPU untested             |
+| `laya-typed-decisions-split-single.onnx` | 1.6 GB | ✅ CPU (parity ≤7.3e-06, 13/13 == torch)           |
+| `laya-typed-decisions-split-fp16.onnx`   | 0.85GB | ✅ CPU/WASM only (pdrift ≤3.1e-04, no flips)       |
+| `laya-typed-decisions-split-int8.onnx`   | 0.42GB | ⚠️ CPU 13/13, ~14% faster on 1 probe — unshipped   |
+| `laya-typed-decisions-split-4bit.onnx`   | 0.41GB | ⚠️ CPU 13/13; WebGPU untested                      |
 
 Plus: `js/tokenizer/` (BPE + config + temperatures), `export/act_head.npz`
 and `js/act_head.json` (split head weights), parity/accuracy fixtures.

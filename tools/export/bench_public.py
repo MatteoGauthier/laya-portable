@@ -21,8 +21,6 @@ sys.path.insert(0, str(ROOT / "upstream" / "laya"))
 sys.path.insert(0, str(ROOT / "tools" / "export"))
 import numpy as np
 
-from check_accuracy import TorchAdapter, SplitOnnxAdapter
-
 
 def sample_per_class(dataset_name, split, text_key, label_key, label_names, n_per_class, seed=0):
     from datasets import load_dataset
@@ -116,6 +114,8 @@ def main():
     args = ap.parse_args()
 
     print("loading adapters...", flush=True)
+    from check_accuracy import TorchAdapter, SplitOnnxAdapter
+
     adapters = [TorchAdapter()] + [SplitOnnxAdapter(f"onnx-{Path(m).stem}", ROOT / m) for m in args.models]
 
     report = {"suites": {}, "community": "interface-excluded (fixed K=2; all suites need K>=4)"}
