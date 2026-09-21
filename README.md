@@ -60,7 +60,7 @@ uv pip install --python .venv/bin/python -r requirements-benchmark.txt
 ```
 
 ```sh
-python -m pytest tests/ -q
+python -m pytest -q  # testpaths in pyproject.toml
 cd packages/laya-js && npm install && npm test && npm run check
 cd apps/playground && npm install && npm test
 ```

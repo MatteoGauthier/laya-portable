@@ -17,6 +17,10 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - run: npm ci --ignore-scripts
+        # Install at the repo root so workspaces hoist: typescript/oxlint/oxfmt
+        # resolve from root .bin. A subdir install leaves npx with no local tsc,
+        # and it fetches the unrelated `tsc` package from the registry instead.
+        working-directory: ${{ github.workspace }}
       - run: npm run check:versions
       - run: npm test
       - run: npm run check:bpe
@@ -42,6 +46,8 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - run: npm ci --ignore-scripts
+        # Same as js job: root install, or npx resolves binaries from the registry.
+        working-directory: ${{ github.workspace }}
       - run: npx tsc --noEmit
       - run: npx oxlint
       - run: npx oxfmt --check .
@@ -56,7 +62,8 @@ jobs:
         with:
           python-version: '3.13'
       - run: pip install pytest
-      - run: python -m pytest tests/ -q
+      # testpaths lives in pyproject.toml (tools/export/tests); no tests/ dir.
+      - run: python -m pytest -q
 
   python-export:
     # Heavy: needs pinned checkpoint + 1.6GB rebuild. Manual only.
@@ -69,4 +76,4 @@ jobs:
       - run: uv pip install --python .venv/bin/python -r requirements-benchmark.txt
       - run: git clone https://github.com/NandhaKishorM/laya upstream/laya && git -C upstream/laya checkout 6a5819129eb220570792e417e49723d697efd76f
       - run: .venv/bin/python tools/export/check_parity.py
-      - run: .venv/bin/python -m pytest tests/ -q
+      - run: .venv/bin/python -m pytest -q
