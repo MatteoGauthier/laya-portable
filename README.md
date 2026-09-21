@@ -4,15 +4,25 @@ Run Laya decisions outside Python: Node.js, browsers (WASM/WebGPU in a worker),
 and anywhere ONNX runs. FP32 by default, with a measured FP16 option. Same
 tokenizer, same calibration, same answers.
 
+**Live Demo**: [https://laya.ts.ax](https://laya.ts.ax) (in-browser WebGPU/WASM, hosted on Cloudflare Pages & R2)
+
 ## Quickstart
+
+### Try the web playground
+
+Visit the live demo at [https://laya.ts.ax](https://laya.ts.ax), or run locally:
 
 ```sh
 cd apps/playground && npm install && npm run dev
 ```
 
+### Run via Node.js CLI
+
 ```sh
 cd packages/laya-js && npm install && node bin/cli.ts
 ```
+
+### Use the SDK
 
 ```js
 import { LayaClient } from '@laya/js';
@@ -44,7 +54,7 @@ Details: `tools/export/README.md`, `packages/laya-js/README.md`, `RELEASE_NOTES.
 - `packages/test-vectors`: shared fixtures and reports, generated.
 - `tools/export`: converters and parity checks.
 - `models`: generated ONNX artifacts, local only.
-- `docs`: usage, performance, and portability notes.
+- `docs`: usage, performance, hosting, and portability notes.
 - `upstream/laya`: pinned source checkout, gitignored.
 
 ## Reproducing (contributors)
