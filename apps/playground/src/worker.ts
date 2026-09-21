@@ -143,7 +143,7 @@ async function cachedBytes(url: string, onPct: (pct: number) => void): Promise<U
 
 workerSelf.onmessage = (e: MessageEvent<WorkerRequest>) => {
   void (async () => {
-    const { state, questions, backend = 'auto', precision = 'fp32' } = e.data;
+    const { state, questions, backend = 'auto', precision = 'fp16' } = e.data;
     const sel = (e.data.checkpoint ?? e.data.model ?? 'auto') as CheckpointSel;
     const langHint = e.data.lang;
     const decision =

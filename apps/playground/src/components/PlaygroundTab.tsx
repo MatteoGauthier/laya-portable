@@ -70,7 +70,7 @@ export function PlaygroundTab(): React.JSX.Element {
   const [stateText, setStateText] = useState(JSON.stringify(initial.state, null, 1));
   const [qText, setQText] = useState(JSON.stringify(initial.questions, null, 1));
   const [backend, setBackend] = useState<Backend>('auto');
-  const [precision, setPrecision] = useState<Precision>('fp32');
+  const [precision, setPrecision] = useState<Precision>('fp16');
   const [checkpoint, setCheckpoint] = useState<Checkpoint>('auto');
   const [status, setStatus] = useState('idle');
   const [log, setLog] = useState<string[]>([]);
@@ -163,8 +163,8 @@ export function PlaygroundTab(): React.JSX.Element {
             onChange={(e) => setPrecision(e.target.value as Precision)}
             title="FP16 halves download; WebGPU FP16 is fast but 40× less accurate — see Progress"
           >
-            <option value="fp32">fp32 (1.6GB)</option>
             <option value="fp16">fp16 (806MB)</option>
+            <option value="fp32">fp32 (1.6GB)</option>
           </select>
           <label htmlFor="checkpoint">Checkpoint</label>
           <select
@@ -227,7 +227,7 @@ export function PlaygroundTab(): React.JSX.Element {
           <div className="empty">
             Run to see calibrated answers here.
             <br />
-            First run downloads 1.6GB once (localhost, cached after).
+            First run downloads 806MB once (localhost, cached after).
           </div>
         )}
         {result && (
