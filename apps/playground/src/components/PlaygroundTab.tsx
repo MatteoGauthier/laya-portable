@@ -23,45 +23,6 @@ export function isSetupStage(s: string): boolean {
   return s === 'tokenizer' || s.startsWith('tokenizer-') || s.startsWith('model-') || s.startsWith('backend-');
 }
 
-export function compactJson(text: string): string {
-  return JSON.stringify(JSON.parse(text) as unknown);
-}
-
-export function nodeSnippet(stateText: string, qText: string): string {
-  return [
-    "import { LayaClient } from '@laya/js';",
-    '',
-    'const laya = await LayaClient.open();',
-    `const result = await laya.predict(${compactJson(stateText)}, ${compactJson(qText)});`,
-    'console.log(result.answers, result.timings);',
-    'await laya.close();',
-    '',
-  ].join('\n');
-}
-
-export function cliSnippet(stateText: string, qText: string, precision: Precision): string {
-  const fp = precision === 'fp16' ? ' --fp16' : '';
-  return `node bin/cli.ts${fp} --state '${compactJson(stateText)}' --questions '${compactJson(qText)}'\n`;
-}
-
-export function browserSnippet(
-  stateText: string,
-  qText: string,
-  backend: Backend,
-  precision: Precision,
-  checkpoint: Checkpoint = 'auto',
-): string {
-  return [
-    "const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });",
-    'worker.onmessage = (e) => {',
-    "  if (e.data.type === 'done') console.log(e.data.result.answers, e.data.timings, e.data.routing);",
-    "  if (e.data.type === 'error') console.error(e.data.message);",
-    '};',
-    `worker.postMessage({ state: ${compactJson(stateText)}, questions: ${compactJson(qText)}, backend: '${backend}', precision: '${precision}', checkpoint: '${checkpoint}' });`,
-    '',
-  ].join('\n');
-}
-
 export function PlaygroundTab(): React.JSX.Element {
   const worker = useWorker();
   const [preset, setPreset] = useState('Original 3Q');
@@ -76,20 +37,6 @@ export function PlaygroundTab(): React.JSX.Element {
   const [log, setLog] = useState<string[]>([]);
   const [pct, setPct] = useState<number | null>(null);
   const [result, setResult] = useState<Extract<WorkerResponse, { type: 'done' }> | null>(null);
-  const [copied, setCopied] = useState<string | null>(null);
-
-  const copySnippet = (label: string, build: () => string): void => {
-    let text: string;
-    try {
-      text = build();
-    } catch {
-      return;
-    }
-    if (!navigator.clipboard) return;
-    navigator.clipboard.writeText(text).catch(() => undefined);
-    setCopied(label);
-    setTimeout(() => setCopied((c) => (c === label ? null : c)), 1500);
-  };
 
   useEffect(() => {
     const onMsg = (e: MessageEvent<WorkerResponse>): void => {
@@ -243,21 +190,6 @@ export function PlaygroundTab(): React.JSX.Element {
               )}
             </div>
             <Waterfall timings={result.timings} setup={result.setup} />
-            <div className="row" aria-label="Copy this run as code">
-              <button onClick={() => copySnippet('node', () => nodeSnippet(stateText, qText))}>
-                {copied === 'node' ? 'Copied ✓' : 'Copy as Node'}
-              </button>
-              <button onClick={() => copySnippet('cli', () => cliSnippet(stateText, qText, precision))}>
-                {copied === 'cli' ? 'Copied ✓' : 'Copy as CLI'}
-              </button>
-              <button
-                onClick={() =>
-                  copySnippet('browser', () => browserSnippet(stateText, qText, backend, precision, checkpoint))
-                }
-              >
-                {copied === 'browser' ? 'Copied ✓' : 'Copy as browser'}
-              </button>
-            </div>
             {Object.entries(result.result.answers).map(([qid, a]) => (
               <AnswerCard key={qid} qid={qid} answer={a} />
             ))}
