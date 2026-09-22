@@ -1,9 +1,8 @@
 # Reports schema (`packages/test-vectors/reports/`)
 
 Machine-readable verdicts produced by `tools/export/`. Asserted by
-`tools/export/tests/test_reports.py` (CI-gatable, no model load) and rendered
-by the playground Progress tab. Regenerate — never hand-edit (see
-`packages/test-vectors/README.md`).
+`tools/export/tests/test_reports.py` (CI-gatable, no model load).
+Regenerate, never hand-edit (see `packages/test-vectors/README.md`).
 
 ## parity-report.json (from `check_parity.py`, exits 1 on drift)
 

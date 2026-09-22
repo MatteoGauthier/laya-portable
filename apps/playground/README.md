@@ -19,8 +19,7 @@ npm run typecheck
 npm run build   # bundles onnxruntime-web 1.30.0 (offline, ~28MB wasm in dist/)
 ```
 
-Tabs: **Playground** (run text→answer in a worker, split ONNX + pure-JS BPE),
-**Progress** (phase board, parity + latency tables from `export/` + `docs/`),
+Tabs: **Playground** (run text to answer in a worker, split ONNX + pure-JS BPE),
 **Inspector** (tokenizer tester, fixture viewer).
 
 Structure: `src/components/` (tabs + answer cards), `src/hooks/useWorker.tsx`

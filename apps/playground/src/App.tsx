@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
 import { PlaygroundTab } from './components/PlaygroundTab.tsx';
-import { ProgressTab } from './components/ProgressTab.tsx';
 import { InspectorTab } from './components/InspectorTab.tsx';
 
 const TABS = [
   { id: 'play', label: 'Playground' },
-  { id: 'prog', label: 'Progress' },
   { id: 'insp', label: 'Inspector' },
 ] as const;
 
@@ -33,7 +31,6 @@ export default function App(): React.JSX.Element {
       </header>
       <main>
         {tab === 'play' && <PlaygroundTab />}
-        {tab === 'prog' && <ProgressTab />}
         {tab === 'insp' && <InspectorTab />}
       </main>
     </div>

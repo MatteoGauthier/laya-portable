@@ -161,7 +161,7 @@ export function PlaygroundTab(): React.JSX.Element {
             id="precision"
             value={precision}
             onChange={(e) => setPrecision(e.target.value as Precision)}
-            title="FP16 halves download; WebGPU FP16 is fast but 40× less accurate — see Progress"
+            title="FP16 halves download; on WebGPU it is fast but far less accurate (see release notes)"
           >
             <option value="fp16">fp16 (806MB)</option>
             <option value="fp32">fp32 (1.6GB)</option>
@@ -171,7 +171,7 @@ export function PlaygroundTab(): React.JSX.Element {
             id="checkpoint"
             value={checkpoint}
             onChange={(e) => setCheckpoint(e.target.value as Checkpoint)}
-            title="auto runs JS routing (non-Latin → multilingual); explicit pins a checkpoint. Multilingual/typed need B2 export artifacts in /models."
+            title="Auto routes by script and language; explicit pins a checkpoint. Multilingual and typed need export artifacts in /models."
           >
             <option value="auto">auto (router)</option>
             <option value="english">english</option>

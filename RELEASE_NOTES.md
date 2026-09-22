@@ -7,6 +7,18 @@ B1/B2 update: JS `Router` (`laya-lang.ts` + `laya-router.ts`, exact port of
 upstream detection/routing) plus multilingual + typed-decisions split exports
 with per-checkpoint parity, BPE, FP16, and accuracy gates (see `export/README.md`).
 
+## Status
+
+- Phase 1 done: faithful FP32 export, variable K, 5-fixture CPU parity PASS
+  (see `tools/export/README.md`, Measured parity).
+- Phase 2 done: browser core, pure-JS BPE, split WebGPU, worker text to answer
+  (see `packages/laya-js/README.md`).
+- Phase 3 ongoing: precision and size. FP16 ships for CPU/WASM; INT8 and
+  4-bit on WebGPU rejected with evidence (see `tools/export/README.md`).
+- Phase 4 blocked: native pick. CoreML direct conversion blocked on toolchain
+  coverage; MLX and laya.cpp untouched (see `tools/export/README.md` and
+  `tools/mlx/README.md`).
+
 ## Pinned inputs
 
 - Source: `NandhaKishorM/laya @ 6a58191` (`upstream/`, re-cloneable).
